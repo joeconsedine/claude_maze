@@ -1,0 +1,49 @@
+{# Line Chart Template #}
+<script>
+function renderLineChart(chartDom, data) {
+    const option = {
+        title: {
+            text: '{{ title if title else "Line Chart" }}',
+            left: 'center',
+            textStyle: {
+                fontSize: 24,
+                fontWeight: 'bold'
+            }
+        },
+        tooltip: {
+            trigger: 'axis'
+        },
+        xAxis: {
+            type: 'category',
+            data: data.xAxis,
+            axisLabel: {
+                fontSize: 14
+            }
+        },
+        yAxis: {
+            type: 'value',
+            axisLabel: {
+                fontSize: 14
+            }
+        },
+        series: [{
+            data: data.series,
+            type: 'line',
+            smooth: true,
+            lineStyle: {
+                width: 3
+            },
+            itemStyle: {
+                borderWidth: 2
+            },
+            emphasis: {
+                focus: 'series'
+            },
+            animationDuration: 2000,
+            animationEasing: 'cubicOut'
+        }]
+    };
+
+    chartDom.setOption(option, true);
+}
+</script>

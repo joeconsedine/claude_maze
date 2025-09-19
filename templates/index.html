@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ECharts Demo Presentation</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="presentation-container">
+        <div class="slide-header">
+            <h1 id="slide-title">Loading...</h1>
+        </div>
+
+        <div class="chart-container">
+            <div id="chart" style="width: 800px; height: 500px; margin: 0 auto;"></div>
+        </div>
+
+        <div class="slide-info">
+            <span id="slide-counter">1 / 4</span>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/presentation.js') }}"></script>
+</body>
+</html>

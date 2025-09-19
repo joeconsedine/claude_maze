@@ -1,0 +1,63 @@
+{# Scatter Chart Template #}
+<script>
+function renderScatterChart(chartDom, data) {
+    const option = {
+        title: {
+            text: '{{ title if title else "Scatter Plot" }}',
+            left: 'center',
+            textStyle: {
+                fontSize: 24,
+                fontWeight: 'bold'
+            }
+        },
+        tooltip: {
+            trigger: 'item',
+            formatter: 'X: {c[0]}<br/>Y: {c[1]}'
+        },
+        xAxis: {
+            type: 'value',
+            splitLine: {
+                lineStyle: {
+                    type: 'dashed'
+                }
+            },
+            axisLabel: {
+                fontSize: 14
+            }
+        },
+        yAxis: {
+            type: 'value',
+            splitLine: {
+                lineStyle: {
+                    type: 'dashed'
+                }
+            },
+            axisLabel: {
+                fontSize: 14
+            }
+        },
+        series: [{
+            symbolSize: 12,
+            data: data,
+            type: 'scatter',
+            itemStyle: {
+                color: '#c23531',
+                opacity: 0.8
+            },
+            emphasis: {
+                focus: 'series',
+                itemStyle: {
+                    shadowBlur: 10,
+                    shadowColor: 'rgba(120, 36, 50, 0.5)',
+                    shadowOffsetY: 5,
+                    color: '#c23531'
+                }
+            },
+            animationDuration: 2000,
+            animationEasing: 'cubicOut'
+        }]
+    };
+
+    chartDom.setOption(option, true);
+}
+</script>
