@@ -1,6 +1,7 @@
 from flask import Flask, render_template, jsonify
 import json
 import time
+import os
 
 app = Flask(__name__)
 
@@ -77,9 +78,21 @@ slide_controller = SlideController()
 def index():
     return render_template('index.html')
 
+@app.route('/control')
+def control():
+    return render_template('control.html')
+
 @app.route('/api/current-slide')
 def current_slide():
     return jsonify(slide_controller.get_current_slide())
+
+@app.route('/api/slides')
+def get_slides():
+    return jsonify({
+        'slides': slide_controller.slides,
+        'current_index': slide_controller.current_slide,
+        'total': len(slide_controller.slides)
+    })
 
 @app.route('/api/next-slide')
 def next_slide():
@@ -94,4 +107,6 @@ def goto_slide(index):
     return jsonify(slide_controller.goto_slide(index))
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get('PORT', 5000))
+    debug = os.environ.get('FLASK_ENV') == 'development'
+    app.run(host='0.0.0.0', port=port, debug=debug)

@@ -2,13 +2,14 @@ class PresentationController {
     constructor() {
         this.chart = null;
         this.currentSlide = null;
+        this.currentSlideId = null;
         this.slideCounter = document.getElementById('slide-counter');
         this.slideTitle = document.getElementById('slide-title');
         this.chartContainer = document.getElementById('chart');
 
         this.initChart();
         this.loadCurrentSlide();
-        this.startAutoAdvance();
+        this.startPolling();
     }
 
     initChart() {
@@ -26,26 +27,34 @@ class PresentationController {
         try {
             const response = await fetch('/api/current-slide');
             const slideData = await response.json();
-            this.currentSlide = slideData;
-            this.renderSlide(slideData);
+
+            // Only re-render if the slide has actually changed
+            if (this.currentSlideId !== slideData.id) {
+                this.currentSlideId = slideData.id;
+                this.currentSlide = slideData;
+                this.renderSlide(slideData);
+            } else {
+                // Just update the counter without re-rendering the chart
+                this.updateSlideCounter();
+            }
         } catch (error) {
             console.error('Error loading slide:', error);
         }
     }
 
-    async nextSlide() {
+    async updateSlideCounter() {
         try {
-            const response = await fetch('/api/next-slide');
-            const slideData = await response.json();
-            this.currentSlide = slideData;
-            this.renderSlide(slideData);
+            const response = await fetch('/api/slides');
+            const data = await response.json();
+            this.slideCounter.textContent = `${data.current_index + 1} / ${data.total}`;
         } catch (error) {
-            console.error('Error loading next slide:', error);
+            console.error('Error updating slide counter:', error);
         }
     }
 
     renderSlide(slideData) {
         this.slideTitle.textContent = slideData.title;
+        this.updateSlideCounter();
 
         this.chart.clear();
 
@@ -268,10 +277,12 @@ class PresentationController {
         this.chart.setOption(option, true);
     }
 
-    startAutoAdvance() {
+    startPolling() {
+        // Poll for changes every 2 seconds to sync with control panel
+        // ONLY loads current slide - NEVER calls next/previous automatically
         setInterval(() => {
-            this.nextSlide();
-        }, 4000); // Advance every 4 seconds
+            this.loadCurrentSlide();
+        }, 2000);
     }
 }
 
