@@ -147,7 +147,7 @@ class PresentationController {
                     focus: 'series'
                 },
                 animationDuration: 2000,
-                animationEasing: 'cubicOut'
+                animationEasing: 'easeInOutQuart'
             }]
         };
 
@@ -198,7 +198,7 @@ class PresentationController {
                     focus: 'series'
                 },
                 animationDuration: 2000,
-                animationEasing: 'bounceOut'
+                animationEasing: 'easeInOutQuart'
             }]
         };
 
@@ -239,7 +239,7 @@ class PresentationController {
                     }
                 },
                 animationType: 'scale',
-                animationEasing: 'elasticOut',
+                animationEasing: 'easeInOutQuart',
                 animationDuration: 2000
             }]
         };
@@ -301,7 +301,7 @@ class PresentationController {
                     }
                 },
                 animationDuration: 2000,
-                animationEasing: 'cubicOut'
+                animationEasing: 'easeInOutQuart'
             }]
         };
 
