@@ -20,7 +20,7 @@ class PresentationController {
 
     initChart() {
         console.log('📊 Initializing ECharts...');
-        this.chart = echarts.init(this.chartContainer, null, {
+        this.chart = echarts.init(this.chartContainer, 'dark', {
             renderer: 'canvas',
             useDirtyRect: false
         });
