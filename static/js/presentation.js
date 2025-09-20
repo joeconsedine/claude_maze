@@ -1,5 +1,6 @@
 class PresentationController {
     constructor() {
+        console.log('🚀 PresentationController constructor called');
         this.chart = null;
         this.currentSlide = null;
         this.currentSlideId = null;
@@ -7,9 +8,13 @@ class PresentationController {
         this.slideTitle = document.getElementById('slide-title');
         this.chartContainer = document.getElementById('chart');
 
+        console.log('🔧 Initializing chart...');
         this.initChart();
+        console.log('📥 Loading initial slide...');
         this.loadCurrentSlide();
+        console.log('🔄 Starting polling...');
         this.startPolling();
+        console.log('✅ PresentationController initialized');
     }
 
     initChart() {
@@ -25,20 +30,25 @@ class PresentationController {
 
     async loadCurrentSlide() {
         try {
+            console.log('🔄 loadCurrentSlide() called at', new Date().toISOString());
             const response = await fetch('/api/current-slide');
             const slideData = await response.json();
+            console.log('📡 Received slide data:', slideData);
+            console.log('🆔 Current stored ID:', this.currentSlideId, 'New ID:', slideData.id);
 
             // Only re-render if the slide has actually changed
             if (this.currentSlideId !== slideData.id) {
+                console.log('🎬 Slide changed! Rendering new slide:', slideData.id);
                 this.currentSlideId = slideData.id;
                 this.currentSlide = slideData;
                 this.renderSlide(slideData);
             } else {
+                console.log('➡️ Same slide, just updating counter');
                 // Just update the counter without re-rendering the chart
                 this.updateSlideCounter();
             }
         } catch (error) {
-            console.error('Error loading slide:', error);
+            console.error('❌ Error loading slide:', error);
         }
     }
 
@@ -278,9 +288,11 @@ class PresentationController {
     }
 
     startPolling() {
+        console.log('🔁 Starting polling every 2 seconds');
         // Poll for changes every 2 seconds to sync with control panel
         // ONLY loads current slide - NEVER calls next/previous automatically
         setInterval(() => {
+            console.log('⏰ Polling interval triggered');
             this.loadCurrentSlide();
         }, 2000);
     }
