@@ -2,12 +2,14 @@ from flask import Flask, render_template, jsonify
 import json
 import time
 import os
+import threading
 
 app = Flask(__name__)
 
 class SlideController:
     def __init__(self):
         self.current_slide = 0
+        self.lock = threading.Lock()
         self.slides = [
             {
                 'id': 'line_chart',
@@ -51,26 +53,30 @@ class SlideController:
         ]
 
     def get_current_slide(self):
-        return self.slides[self.current_slide]
+        with self.lock:
+            return self.slides[self.current_slide]
 
     def next_slide(self):
-        if self.current_slide < len(self.slides) - 1:
-            self.current_slide += 1
-        else:
-            self.current_slide = 0
-        return self.get_current_slide()
+        with self.lock:
+            if self.current_slide < len(self.slides) - 1:
+                self.current_slide += 1
+            else:
+                self.current_slide = 0
+            return self.slides[self.current_slide]
 
     def previous_slide(self):
-        if self.current_slide > 0:
-            self.current_slide -= 1
-        else:
-            self.current_slide = len(self.slides) - 1
-        return self.get_current_slide()
+        with self.lock:
+            if self.current_slide > 0:
+                self.current_slide -= 1
+            else:
+                self.current_slide = len(self.slides) - 1
+            return self.slides[self.current_slide]
 
     def goto_slide(self, index):
-        if 0 <= index < len(self.slides):
-            self.current_slide = index
-        return self.get_current_slide()
+        with self.lock:
+            if 0 <= index < len(self.slides):
+                self.current_slide = index
+            return self.slides[self.current_slide]
 
 slide_controller = SlideController()
 
