@@ -1,20 +1,17 @@
 class PresentationController {
     constructor() {
-        console.log('🚀 PresentationController constructor called');
+        console.log('🚀 STATIC PresentationController - NO AUTO-UPDATES');
         this.chart = null;
         this.currentSlide = null;
-        this.currentSlideId = null;
         this.slideCounter = document.getElementById('slide-counter');
         this.slideTitle = document.getElementById('slide-title');
         this.chartContainer = document.getElementById('chart');
 
-        console.log('🔧 Initializing chart...');
         this.initChart();
-        console.log('📥 Loading initial slide...');
-        this.loadCurrentSlide();
-        console.log('🔄 Starting polling...');
-        this.startPolling();
-        console.log('✅ PresentationController initialized');
+        this.loadInitialSlide();
+
+        // NO POLLING - COMPLETELY STATIC
+        console.log('✅ Static presentation initialized - will NEVER auto-update');
     }
 
     initChart() {
@@ -28,27 +25,20 @@ class PresentationController {
         });
     }
 
-    async loadCurrentSlide() {
+    async loadInitialSlide() {
         try {
-            console.log('🔄 loadCurrentSlide() called at', new Date().toISOString());
+            console.log('📥 Loading INITIAL slide ONCE');
             const response = await fetch('/api/current-slide');
             const slideData = await response.json();
-            console.log('📡 Received slide data:', slideData);
-            console.log('🆔 Current stored ID:', this.currentSlideId, 'New ID:', slideData.id);
+            console.log('📡 Received initial slide:', slideData);
 
-            // Only re-render if the slide has actually changed
-            if (this.currentSlideId !== slideData.id) {
-                console.log('🎬 Slide changed! Rendering new slide:', slideData.id);
-                this.currentSlideId = slideData.id;
-                this.currentSlide = slideData;
-                this.renderSlide(slideData);
-            } else {
-                console.log('➡️ Same slide, just updating counter');
-                // Just update the counter without re-rendering the chart
-                this.updateSlideCounter();
-            }
+            this.currentSlide = slideData;
+            this.renderSlide(slideData);
+            this.updateSlideCounter();
+
+            console.log('🔒 Initial slide loaded - NO MORE UPDATES WILL HAPPEN');
         } catch (error) {
-            console.error('❌ Error loading slide:', error);
+            console.error('❌ Error loading initial slide:', error);
         }
     }
 
@@ -63,8 +53,8 @@ class PresentationController {
     }
 
     renderSlide(slideData) {
+        console.log('🎬 Rendering slide:', slideData.title);
         this.slideTitle.textContent = slideData.title;
-        this.updateSlideCounter();
 
         this.chart.clear();
 
@@ -287,17 +277,11 @@ class PresentationController {
         this.chart.setOption(option, true);
     }
 
-    startPolling() {
-        console.log('🔁 Starting polling every 2 seconds');
-        // Poll for changes every 2 seconds to sync with control panel
-        // ONLY loads current slide - NEVER calls next/previous automatically
-        setInterval(() => {
-            console.log('⏰ Polling interval triggered');
-            this.loadCurrentSlide();
-        }, 2000);
-    }
+    // NO POLLING METHOD - COMPLETELY REMOVED
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('🎯 Creating STATIC presentation controller');
     new PresentationController();
+    console.log('🔒 Presentation is now COMPLETELY STATIC - no auto-updates will occur');
 });
