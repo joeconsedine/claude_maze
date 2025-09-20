@@ -36,6 +36,23 @@ class ControlPanel {
         }
     }
 
+    async refreshSlideState() {
+        try {
+            const response = await fetch('/api/slides');
+            const data = await response.json();
+
+            // Only update if the server state actually changed
+            if (data.current_index !== this.currentIndex) {
+                console.log(`🔄 Server slide changed: ${this.currentIndex} → ${data.current_index}`);
+                this.currentIndex = data.current_index;
+                this.updateDisplay();
+                this.renderSlideList();
+            }
+        } catch (error) {
+            console.error('Error refreshing slide state:', error);
+        }
+    }
+
     async previousSlide() {
         try {
             const response = await fetch('/api/previous-slide');
@@ -112,7 +129,7 @@ class ControlPanel {
     startPolling() {
         // Poll every 2 seconds to sync with any external changes
         setInterval(() => {
-            this.loadSlides();
+            this.refreshSlideState();
         }, 2000);
     }
 }
