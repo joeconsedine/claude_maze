@@ -54,7 +54,8 @@ class SlideController:
 
     def get_current_slide(self):
         with self.lock:
-            return self.slides[self.current_slide]
+            # TEMPORARY: Force slide 0 to test if something else is causing auto-increment
+            return self.slides[0]
 
     def next_slide(self):
         with self.lock:
