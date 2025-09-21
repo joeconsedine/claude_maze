@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ECharts Demo Presentation</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
@@ -22,6 +23,7 @@
         </div>
     </div>
 
+    <script src="{{ url_for('static', filename='js/laser-overlay.js') }}"></script>
     <script src="{{ url_for('static', filename='js/presentation.js') }}?v=debug-{{ range(1000, 9999) | random }}"></script>
 </body>
 </html>

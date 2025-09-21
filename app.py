@@ -1,4 +1,5 @@
 from flask import Flask, render_template, jsonify, request
+from flask_socketio import SocketIO, emit, join_room, leave_room
 import json
 import time
 import os
@@ -11,6 +12,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'laser-presentation-secret')
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
 class SlideController:
     def __init__(self):
@@ -148,7 +151,38 @@ def goto_slide(index):
     logger.error(f"🚨 API/GOTO-SLIDE CALLED! Index: {index} - IP: {client_ip} - UA: {user_agent[:50]}... - Referer: {referer}")
     return jsonify(slide_controller.goto_slide(index))
 
+# WebSocket event handlers for laser overlay
+@socketio.on('connect')
+def handle_connect():
+    logger.info(f"🔌 Client connected: {request.sid}")
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    logger.info(f"🔌 Client disconnected: {request.sid}")
+
+@socketio.on('join_controller')
+def handle_join_controller():
+    join_room('controllers')
+    logger.info(f"🎮 Controller joined: {request.sid}")
+
+@socketio.on('join_presentation')
+def handle_join_presentation():
+    join_room('presentations')
+    logger.info(f"📺 Presentation joined: {request.sid}")
+
+@socketio.on('laser_point')
+def handle_laser_point(data):
+    # Broadcast laser point from controller to all presentations
+    emit('laser_point', data, room='presentations')
+    logger.debug(f"🔴 Laser point broadcasted: {data}")
+
+@socketio.on('laser_clear')
+def handle_laser_clear():
+    # Clear laser trails on all presentations
+    emit('laser_clear', room='presentations')
+    logger.info("🧹 Laser clear broadcasted")
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     debug = os.environ.get('FLASK_ENV') == 'development'
-    app.run(host='0.0.0.0', port=port, debug=debug)
+    socketio.run(app, host='0.0.0.0', port=port, debug=debug)
