@@ -5,7 +5,7 @@ import os
 import threading
 import logging
 from datetime import datetime
-from livekit import api
+import livekit
 import jwt
 
 # Configure detailed logging
@@ -324,10 +324,10 @@ def generate_livekit_token():
             return jsonify({'error': 'LiveKit credentials not configured'}), 500
 
         # Create access token
-        token = api.AccessToken(api_key, api_secret) \
+        token = livekit.AccessToken(api_key, api_secret) \
             .with_identity(participant_name) \
             .with_name(participant_name) \
-            .with_grants(api.VideoGrants(
+            .with_grants(livekit.VideoGrants(
                 room_join=True,
                 room=room_name,
                 can_publish=True,
