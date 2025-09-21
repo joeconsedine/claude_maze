@@ -202,6 +202,10 @@ def viewer():
 def livekit_test():
     return render_template('livekit_test.html')
 
+@app.route('/menu')
+def menu():
+    return render_template('menu.html')
+
 @app.route('/api/current-slide')
 def current_slide():
     client_ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.environ.get('REMOTE_ADDR'))

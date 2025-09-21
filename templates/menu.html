@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Maze Presentation - Main Menu</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+            color: white;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #007bff, #28a745, #ffc107);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            color: #ccc;
+            margin-bottom: 20px;
+        }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .menu-section {
+            background: rgba(42, 42, 42, 0.8);
+            border-radius: 15px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .menu-section:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 123, 255, 0.3);
+        }
+
+        .menu-section h2 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            color: #007bff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .menu-section p {
+            color: #ccc;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .menu-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .menu-button {
+            display: inline-block;
+            padding: 12px 20px;
+            background: linear-gradient(45deg, #007bff, #0056b3);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+
+        .menu-button:hover {
+            background: linear-gradient(45deg, #0056b3, #004494);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 123, 255, 0.4);
+        }
+
+        .menu-button.primary {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            font-size: 1.1rem;
+            padding: 15px 25px;
+        }
+
+        .menu-button.primary:hover {
+            background: linear-gradient(45deg, #20c997, #17a2b8);
+        }
+
+        .menu-button.secondary {
+            background: linear-gradient(45deg, #6c757d, #5a6268);
+        }
+
+        .menu-button.secondary:hover {
+            background: linear-gradient(45deg, #5a6268, #495057);
+        }
+
+        .menu-button.warning {
+            background: linear-gradient(45deg, #ffc107, #e0a800);
+            color: #212529;
+        }
+
+        .menu-button.warning:hover {
+            background: linear-gradient(45deg, #e0a800, #d39e00);
+        }
+
+        .features {
+            text-align: center;
+            margin-top: 40px;
+            padding: 30px;
+            background: rgba(42, 42, 42, 0.5);
+            border-radius: 15px;
+        }
+
+        .features h3 {
+            color: #28a745;
+            margin-bottom: 15px;
+        }
+
+        .feature-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .feature-item {
+            padding: 15px;
+            background: rgba(0, 123, 255, 0.1);
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-working {
+            background: #28a745;
+            box-shadow: 0 0 10px #28a745;
+        }
+
+        .status-testing {
+            background: #ffc107;
+            box-shadow: 0 0 10px #ffc107;
+        }
+
+        .status-beta {
+            background: #17a2b8;
+            box-shadow: 0 0 10px #17a2b8;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .menu-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .menu-section {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 Claude Maze Presentation</h1>
+            <p>Interactive presentation system with live streaming, laser overlay, and real-time collaboration</p>
+        </div>
+
+        <div class="menu-grid">
+            <!-- Main Presentation -->
+            <div class="menu-section">
+                <h2>📊 Main Presentation</h2>
+                <p>Interactive chart presentation with laser overlay and live streaming capabilities.</p>
+                <div class="menu-buttons">
+                    <a href="/" class="menu-button primary">
+                        <span class="status-indicator status-working"></span>
+                        Launch Presentation
+                    </a>
+                </div>
+            </div>
+
+            <!-- Presenter Dashboard -->
+            <div class="menu-section">
+                <h2>🎤 Presenter Dashboard</h2>
+                <p>Full presenter controls with camera, microphone, slide navigation, and streaming.</p>
+                <div class="menu-buttons">
+                    <a href="/presenter" class="menu-button primary">
+                        <span class="status-indicator status-beta"></span>
+                        Presenter Mode
+                    </a>
+                </div>
+            </div>
+
+            <!-- Viewer Experience -->
+            <div class="menu-section">
+                <h2>👥 Viewer Experience</h2>
+                <p>Dedicated viewer page with fullscreen mode and participant list.</p>
+                <div class="menu-buttons">
+                    <a href="/viewer" class="menu-button">
+                        <span class="status-indicator status-beta"></span>
+                        Viewer Mode
+                    </a>
+                </div>
+            </div>
+
+            <!-- Controller -->
+            <div class="menu-section">
+                <h2>🎮 Laser Controller</h2>
+                <p>Remote control with slide preview and laser pointer overlay.</p>
+                <div class="menu-buttons">
+                    <a href="/control" class="menu-button">
+                        <span class="status-indicator status-working"></span>
+                        Controller
+                    </a>
+                </div>
+            </div>
+
+            <!-- Testing & Diagnostics -->
+            <div class="menu-section">
+                <h2>🧪 Testing & Diagnostics</h2>
+                <p>Test pages for troubleshooting and verifying functionality.</p>
+                <div class="menu-buttons">
+                    <a href="/livekit-test" class="menu-button warning">
+                        <span class="status-indicator status-testing"></span>
+                        LiveKit Test
+                    </a>
+                    <a href="/webcam-test" class="menu-button secondary">
+                        <span class="status-indicator status-working"></span>
+                        Webcam Test
+                    </a>
+                </div>
+            </div>
+
+            <!-- Documentation -->
+            <div class="menu-section">
+                <h2>📚 Quick Start</h2>
+                <p>Get started with the presentation system in recommended order.</p>
+                <div class="menu-buttons">
+                    <a href="/livekit-test" class="menu-button">1. Test LiveKit Connection</a>
+                    <a href="/presenter" class="menu-button">2. Start Presenting</a>
+                    <a href="/" class="menu-button">3. Share Main View</a>
+                    <a href="/control" class="menu-button">4. Use Laser Controller</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Features Overview -->
+        <div class="features">
+            <h3>✨ Key Features</h3>
+            <div class="feature-list">
+                <div class="feature-item">
+                    <strong>🔴 Laser Overlay</strong><br>
+                    Touch/mouse laser pointer with glowing trails
+                </div>
+                <div class="feature-item">
+                    <strong>📹 Live Streaming</strong><br>
+                    Real-time video with LiveKit integration
+                </div>
+                <div class="feature-item">
+                    <strong>📊 Interactive Charts</strong><br>
+                    ECharts with smooth animations
+                </div>
+                <div class="feature-item">
+                    <strong>📱 Mobile Support</strong><br>
+                    Touch controls and responsive design
+                </div>
+                <div class="feature-item">
+                    <strong>🎮 Remote Control</strong><br>
+                    Slide navigation and laser control
+                </div>
+                <div class="feature-item">
+                    <strong>👥 Multi-User</strong><br>
+                    Presenter/viewer roles with sync
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
