@@ -25,11 +25,37 @@ class SlidePreview {
                 <h3>Live Slide Preview</h3>
                 <div class="preview-controls">
                     <button class="laser-toggle-btn" id="laser-toggle">🔴 Laser Off</button>
+                    <button class="video-toggle-btn" id="video-toggle">📹 Video Off</button>
                 </div>
             </div>
             <div class="preview-content">
                 <div class="preview-chart" id="preview-chart"></div>
                 <div class="preview-title" id="preview-title">Loading...</div>
+            </div>
+            <div class="video-controls-panel" id="video-controls-panel">
+                <div class="video-control-group">
+                    <label for="video-type">Video Source</label>
+                    <select id="video-type">
+                        <option value="none">No Video</option>
+                        <option value="youtube">YouTube</option>
+                        <option value="vimeo">Vimeo</option>
+                        <option value="twitch">Twitch Live</option>
+                        <option value="webcam">Webcam Stream</option>
+                        <option value="jitsi">Jitsi Meet</option>
+                    </select>
+                </div>
+                <div class="video-control-group" id="url-group">
+                    <label for="video-url">Video URL</label>
+                    <input type="text" id="video-url" placeholder="Enter YouTube, Vimeo, or Twitch URL">
+                </div>
+                <div class="video-control-group" id="room-group" style="display: none;">
+                    <label for="room-id">Room ID</label>
+                    <input type="text" id="room-id" placeholder="Enter room ID (optional for webcam)">
+                </div>
+                <div>
+                    <button class="video-action-btn" id="start-video">Start Video</button>
+                    <button class="video-action-btn stop" id="stop-video">Stop Video</button>
+                </div>
             </div>
         `;
 
@@ -77,6 +103,86 @@ class SlidePreview {
             .laser-toggle-btn.active {
                 background: #ff4444;
                 box-shadow: 0 0 10px rgba(255, 68, 68, 0.5);
+            }
+
+            .video-toggle-btn {
+                background: #333;
+                color: #fff;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 14px;
+                transition: all 0.3s ease;
+                margin-left: 10px;
+            }
+
+            .video-toggle-btn:hover {
+                background: #555;
+            }
+
+            .video-toggle-btn.active {
+                background: #44aa44;
+                box-shadow: 0 0 10px rgba(68, 170, 68, 0.5);
+            }
+
+            .video-controls-panel {
+                background: #2a2a2a;
+                border-radius: 8px;
+                padding: 15px;
+                margin-top: 15px;
+                border: 1px solid #444;
+                display: none;
+            }
+
+            .video-controls-panel.active {
+                display: block;
+            }
+
+            .video-control-group {
+                margin-bottom: 15px;
+            }
+
+            .video-control-group label {
+                color: #fff;
+                display: block;
+                margin-bottom: 5px;
+                font-size: 14px;
+            }
+
+            .video-control-group select,
+            .video-control-group input {
+                width: 100%;
+                padding: 8px;
+                border: 1px solid #555;
+                border-radius: 4px;
+                background: #333;
+                color: #fff;
+                font-size: 14px;
+            }
+
+            .video-action-btn {
+                background: #007bff;
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 14px;
+                margin-right: 10px;
+                margin-bottom: 10px;
+            }
+
+            .video-action-btn:hover {
+                background: #0056b3;
+            }
+
+            .video-action-btn.stop {
+                background: #dc3545;
+            }
+
+            .video-action-btn.stop:hover {
+                background: #c82333;
             }
 
             .preview-content {
@@ -128,6 +234,7 @@ class SlidePreview {
         // Initialize chart
         this.initChart();
         this.setupLaserToggle();
+        this.setupVideoControls();
     }
 
     initChart() {
@@ -232,6 +339,148 @@ class SlidePreview {
             });
         } catch (error) {
             console.error('Error clearing laser points on server:', error);
+        }
+    }
+
+    setupVideoControls() {
+        const videoToggleBtn = this.previewElement.querySelector('#video-toggle');
+        const videoControlsPanel = this.previewElement.querySelector('#video-controls-panel');
+        const videoTypeSelect = this.previewElement.querySelector('#video-type');
+        const urlGroup = this.previewElement.querySelector('#url-group');
+        const roomGroup = this.previewElement.querySelector('#room-group');
+        const startVideoBtn = this.previewElement.querySelector('#start-video');
+        const stopVideoBtn = this.previewElement.querySelector('#stop-video');
+
+        // Toggle video controls panel
+        videoToggleBtn.addEventListener('click', () => {
+            const isActive = videoControlsPanel.classList.toggle('active');
+            videoToggleBtn.textContent = isActive ? '📹 Video On' : '📹 Video Off';
+            videoToggleBtn.classList.toggle('active', isActive);
+        });
+
+        // Update form fields based on video type
+        videoTypeSelect.addEventListener('change', () => {
+            const videoType = videoTypeSelect.value;
+
+            if (videoType === 'webcam' || videoType === 'jitsi') {
+                urlGroup.style.display = 'none';
+                roomGroup.style.display = 'block';
+
+                if (videoType === 'webcam') {
+                    this.previewElement.querySelector('#room-id').placeholder = 'Room ID (auto-generated if empty)';
+                } else {
+                    this.previewElement.querySelector('#room-id').placeholder = 'Jitsi room name';
+                }
+            } else if (videoType === 'none') {
+                urlGroup.style.display = 'none';
+                roomGroup.style.display = 'none';
+            } else {
+                urlGroup.style.display = 'block';
+                roomGroup.style.display = 'none';
+
+                const urlInput = this.previewElement.querySelector('#video-url');
+                switch (videoType) {
+                    case 'youtube':
+                        urlInput.placeholder = 'Enter YouTube URL (e.g., https://youtube.com/watch?v=...)';
+                        break;
+                    case 'vimeo':
+                        urlInput.placeholder = 'Enter Vimeo URL (e.g., https://vimeo.com/123456789)';
+                        break;
+                    case 'twitch':
+                        urlInput.placeholder = 'Enter Twitch channel URL (e.g., https://twitch.tv/username)';
+                        break;
+                }
+            }
+        });
+
+        // Start video stream
+        startVideoBtn.addEventListener('click', () => {
+            this.startVideoStream();
+        });
+
+        // Stop video stream
+        stopVideoBtn.addEventListener('click', () => {
+            this.stopVideoStream();
+        });
+    }
+
+    async startVideoStream() {
+        try {
+            const videoType = this.previewElement.querySelector('#video-type').value;
+            const videoUrl = this.previewElement.querySelector('#video-url').value;
+            const roomId = this.previewElement.querySelector('#room-id').value;
+
+            if (videoType === 'none') {
+                alert('Please select a video source type');
+                return;
+            }
+
+            if ((videoType === 'youtube' || videoType === 'vimeo' || videoType === 'twitch') && !videoUrl) {
+                alert('Please enter a video URL');
+                return;
+            }
+
+            if (videoType === 'jitsi' && !roomId) {
+                alert('Please enter a Jitsi room name');
+                return;
+            }
+
+            const response = await fetch('/api/video/start', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    type: videoType,
+                    url: videoUrl,
+                    room_id: roomId
+                })
+            });
+
+            const result = await response.json();
+            if (result.status === 'success') {
+                console.log('Video stream started:', result.video_state);
+
+                // Update UI to show active state
+                const videoToggleBtn = this.previewElement.querySelector('#video-toggle');
+                videoToggleBtn.textContent = '📹 Video Active';
+                videoToggleBtn.classList.add('active');
+
+                // Show generated room ID for webcam
+                if (videoType === 'webcam' && result.video_state.room_id) {
+                    this.previewElement.querySelector('#room-id').value = result.video_state.room_id;
+                    alert(`Webcam room created: ${result.video_state.room_id}`);
+                }
+            } else {
+                alert('Error starting video: ' + result.message);
+            }
+        } catch (error) {
+            console.error('Error starting video stream:', error);
+            alert('Error starting video stream');
+        }
+    }
+
+    async stopVideoStream() {
+        try {
+            const response = await fetch('/api/video/stop', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            const result = await response.json();
+            if (result.status === 'success') {
+                console.log('Video stream stopped');
+
+                // Update UI to show inactive state
+                const videoToggleBtn = this.previewElement.querySelector('#video-toggle');
+                videoToggleBtn.textContent = '📹 Video Off';
+                videoToggleBtn.classList.remove('active');
+            }
+        } catch (error) {
+            console.error('Error stopping video stream:', error);
+            alert('Error stopping video stream');
         }
     }
 

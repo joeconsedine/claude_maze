@@ -19,6 +19,13 @@ class SlideController:
         self.laser_points = []  # Store active laser points
         self.laser_active = False
         self.last_laser_update = time.time()
+
+        # Video streaming state
+        self.video_active = False
+        self.video_url = ""
+        self.video_type = "none"  # none, youtube, vimeo, twitch, webcam, jitsi
+        self.webcam_room_id = ""
+
         logger.info(f"🔧 SlideController initialized - starting at slide {self.current_slide}")
         self.slides = [
             {
@@ -142,6 +149,31 @@ class SlideController:
             self.last_laser_update = time.time()
             logger.info("🧹 Laser points cleared")
 
+    def set_video_stream(self, video_type, video_url="", room_id=""):
+        with self.lock:
+            self.video_type = video_type
+            self.video_url = video_url
+            self.webcam_room_id = room_id
+            self.video_active = video_type != "none"
+            logger.info(f"📹 Video stream set: {video_type} - URL: {video_url} - Room: {room_id}")
+
+    def get_video_state(self):
+        with self.lock:
+            return {
+                'active': self.video_active,
+                'type': self.video_type,
+                'url': self.video_url,
+                'room_id': self.webcam_room_id
+            }
+
+    def stop_video_stream(self):
+        with self.lock:
+            self.video_active = False
+            self.video_type = "none"
+            self.video_url = ""
+            self.webcam_room_id = ""
+            logger.info("📹 Video stream stopped")
+
 slide_controller = SlideController()
 
 @app.route('/')
@@ -229,6 +261,38 @@ def set_laser_active():
 def clear_laser_points():
     slide_controller.clear_laser_points()
     return jsonify({'status': 'success'})
+
+# Video streaming API endpoints
+@app.route('/api/video/start', methods=['POST'])
+def start_video_stream():
+    try:
+        data = request.get_json()
+        video_type = data.get('type', 'none')
+        video_url = data.get('url', '')
+        room_id = data.get('room_id', '')
+
+        # Generate room ID for webcam if not provided
+        if video_type == 'webcam' and not room_id:
+            import uuid
+            room_id = str(uuid.uuid4())[:8]
+
+        slide_controller.set_video_stream(video_type, video_url, room_id)
+        return jsonify({
+            'status': 'success',
+            'video_state': slide_controller.get_video_state()
+        })
+    except Exception as e:
+        logger.error(f"Error starting video stream: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 400
+
+@app.route('/api/video/stop', methods=['POST'])
+def stop_video_stream():
+    slide_controller.stop_video_stream()
+    return jsonify({'status': 'success'})
+
+@app.route('/api/video/state')
+def get_video_state():
+    return jsonify(slide_controller.get_video_state())
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

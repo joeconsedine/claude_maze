@@ -8,6 +8,7 @@ class PresentationController {
         this.chartContainer = document.getElementById('chart');
         this.pollCount = 0;
         this.laserOverlay = null;
+        this.videoOverlay = null;
 
         console.log('🔧 PresentationController starting - timestamp:', new Date().toISOString());
         console.log('🌐 User Agent:', navigator.userAgent);
@@ -16,6 +17,7 @@ class PresentationController {
 
         this.initChart();
         this.initLaserOverlay();
+        this.initVideoOverlay();
         this.loadCurrentSlide();
         this.startPolling();
     }
@@ -322,6 +324,12 @@ class PresentationController {
 
         // Start polling for laser updates
         this.startLaserPolling();
+    }
+
+    initVideoOverlay() {
+        console.log('📹 Initializing video overlay for presentation');
+        const presentationContainer = document.querySelector('body');
+        this.videoOverlay = new VideoOverlay(presentationContainer);
     }
 
     async pollLaserPoints() {
