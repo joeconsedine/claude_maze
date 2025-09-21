@@ -6,7 +6,9 @@
       "Bash(git push:*)",
       "Bash(heroku:*)",
       "Bash(python3:*)",
-      "Bash(PORT=8000 python3 app.py)"
+      "Bash(PORT=8000 python3 app.py)",
+      "Bash(PORT=8080 python3 app.py)",
+      "Bash(pip install:*)"
     ],
     "deny": [],
     "ask": []

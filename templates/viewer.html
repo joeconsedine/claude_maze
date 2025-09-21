@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Viewer - Live Presentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0a0a;
+            color: white;
+            overflow: hidden;
+        }
+
+        .viewer-layout {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            height: 100vh;
+            gap: 10px;
+            padding: 10px;
+        }
+
+        .presentation-area {
+            background: #1a1a1a;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .slide-container {
+            flex: 1;
+            position: relative;
+            background: white;
+            margin: 20px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .video-pane {
+            background: #2a2a2a;
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .video-container {
+            background: #1f1f1f;
+            border-radius: 8px;
+            aspect-ratio: 16/9;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #remoteVideo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+
+        .video-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        button {
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        button.danger {
+            background: #dc3545;
+        }
+
+        button.danger:hover {
+            background: #c82333;
+        }
+
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status.connected {
+            background: #28a745;
+        }
+
+        .status.connecting {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        .status.disconnected {
+            background: #dc3545;
+        }
+
+        .stream-info {
+            background: #1f1f1f;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .stream-info h3 {
+            margin-bottom: 8px;
+            color: #007bff;
+        }
+
+        .stream-info p {
+            margin: 4px 0;
+            color: #ccc;
+        }
+
+        .participant-list {
+            background: #1f1f1f;
+            padding: 15px;
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .participant-list h3 {
+            margin-bottom: 10px;
+            color: #007bff;
+            font-size: 14px;
+        }
+
+        .participant {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            background: #333;
+            border-radius: 4px;
+            margin-bottom: 4px;
+            font-size: 12px;
+        }
+
+        .participant.speaking {
+            background: #28a745;
+        }
+
+        .participant-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #666;
+        }
+
+        .participant-indicator.active {
+            background: #28a745;
+        }
+
+        #slideChart {
+            width: 100%;
+            height: 100%;
+        }
+
+        .no-stream-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #666;
+        }
+
+        .loading-spinner {
+            border: 2px solid #333;
+            border-top: 2px solid #007bff;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .fullscreen-toggle {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            border: none;
+            border-radius: 4px;
+            color: white;
+            padding: 8px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .fullscreen-toggle:hover {
+            background: rgba(0, 0, 0, 0.9);
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script src="https://unpkg.com/livekit-client/dist/livekit-client.umd.js"></script>
+</head>
+<body>
+    <div class="viewer-layout">
+        <div class="presentation-area">
+            <div class="slide-container">
+                <div id="slideChart"></div>
+                <button class="fullscreen-toggle" id="fullscreenToggle">⛶ Fullscreen</button>
+            </div>
+        </div>
+
+        <div class="video-pane">
+            <div class="video-container">
+                <video id="remoteVideo" autoplay playsinline></video>
+                <div class="no-stream-message" id="noStreamMessage">
+                    <div class="loading-spinner" id="loadingSpinner" style="display: none;"></div>
+                    <div id="streamStatusText">📺 No stream available</div>
+                </div>
+            </div>
+
+            <div class="video-controls">
+                <button id="joinStream">Join Stream</button>
+                <button id="leaveStream" class="danger" disabled>Leave Stream</button>
+            </div>
+
+            <div class="status disconnected" id="connectionStatus">
+                Disconnected
+            </div>
+
+            <div class="stream-info">
+                <h3>Stream Info</h3>
+                <p><strong>Room:</strong> <span id="roomName">Not connected</span></p>
+                <p><strong>Identity:</strong> <span id="identity">Not set</span></p>
+                <p><strong>Quality:</strong> <span id="videoQuality">-</span></p>
+            </div>
+
+            <div class="participant-list">
+                <h3>Participants</h3>
+                <div id="participantsList">
+                    <div class="participant">
+                        <div class="participant-indicator"></div>
+                        No participants
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class ViewerApp {
+            constructor() {
+                this.room = null;
+                this.isConnected = false;
+                this.currentSlide = null;
+                this.chart = null;
+                this.slideUpdateInterval = null;
+
+                this.initializeElements();
+                this.setupEventListeners();
+                this.initializeChart();
+                this.startSlidePolling();
+            }
+
+            initializeElements() {
+                this.remoteVideo = document.getElementById('remoteVideo');
+                this.joinStreamBtn = document.getElementById('joinStream');
+                this.leaveStreamBtn = document.getElementById('leaveStream');
+                this.connectionStatus = document.getElementById('connectionStatus');
+                this.roomNameEl = document.getElementById('roomName');
+                this.identityEl = document.getElementById('identity');
+                this.videoQualityEl = document.getElementById('videoQuality');
+                this.participantsListEl = document.getElementById('participantsList');
+                this.noStreamMessage = document.getElementById('noStreamMessage');
+                this.loadingSpinner = document.getElementById('loadingSpinner');
+                this.streamStatusText = document.getElementById('streamStatusText');
+                this.fullscreenToggle = document.getElementById('fullscreenToggle');
+            }
+
+            setupEventListeners() {
+                this.joinStreamBtn.addEventListener('click', () => this.joinStream());
+                this.leaveStreamBtn.addEventListener('click', () => this.leaveStream());
+                this.fullscreenToggle.addEventListener('click', () => this.toggleFullscreen());
+
+                // Handle fullscreen changes
+                document.addEventListener('fullscreenchange', () => {
+                    if (document.fullscreenElement) {
+                        this.fullscreenToggle.textContent = '⛶ Exit Fullscreen';
+                    } else {
+                        this.fullscreenToggle.textContent = '⛶ Fullscreen';
+                    }
+                });
+            }
+
+            initializeChart() {
+                this.chart = echarts.init(document.getElementById('slideChart'));
+                this.chart.setOption({
+                    backgroundColor: 'transparent',
+                    title: {
+                        text: 'Loading presentation...',
+                        left: 'center',
+                        top: 'middle',
+                        textStyle: { color: '#333', fontSize: 24 }
+                    }
+                });
+            }
+
+            updateStatus(message, type) {
+                this.connectionStatus.textContent = message;
+                this.connectionStatus.className = `status ${type}`;
+            }
+
+            async joinStream() {
+                try {
+                    this.updateStatus('Connecting...', 'connecting');
+                    this.joinStreamBtn.disabled = true;
+                    this.loadingSpinner.style.display = 'block';
+                    this.streamStatusText.textContent = 'Connecting to stream...';
+
+                    // Get token from backend
+                    const response = await fetch('/api/token', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            room: 'presentation-room',
+                            identity: `viewer-${Date.now()}`
+                        })
+                    });
+
+                    const tokenData = await response.json();
+                    if (tokenData.error) {
+                        throw new Error(tokenData.error);
+                    }
+
+                    // Connect to LiveKit room
+                    this.room = new LiveKitClient.Room();
+
+                    this.room.on(LiveKitClient.RoomEvent.Connected, () => {
+                        this.isConnected = true;
+                        this.updateStatus('Connected', 'connected');
+                        this.leaveStreamBtn.disabled = false;
+                        this.roomNameEl.textContent = tokenData.room;
+                        this.identityEl.textContent = tokenData.identity;
+                        this.loadingSpinner.style.display = 'none';
+                        this.streamStatusText.textContent = 'Waiting for presenter...';
+                        this.updateParticipantsList();
+                    });
+
+                    this.room.on(LiveKitClient.RoomEvent.TrackSubscribed, (track, publication, participant) => {
+                        if (track.kind === LiveKitClient.Track.Kind.Video) {
+                            track.attach(this.remoteVideo);
+                            this.noStreamMessage.style.display = 'none';
+                            this.updateVideoQuality(publication);
+                        }
+                    });
+
+                    this.room.on(LiveKitClient.RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
+                        if (track.kind === LiveKitClient.Track.Kind.Video) {
+                            track.detach();
+                            this.noStreamMessage.style.display = 'block';
+                            this.streamStatusText.textContent = 'Stream ended';
+                            this.videoQualityEl.textContent = '-';
+                        }
+                    });
+
+                    this.room.on(LiveKitClient.RoomEvent.ParticipantConnected, (participant) => {
+                        this.updateParticipantsList();
+                    });
+
+                    this.room.on(LiveKitClient.RoomEvent.ParticipantDisconnected, (participant) => {
+                        this.updateParticipantsList();
+                    });
+
+                    this.room.on(LiveKitClient.RoomEvent.Disconnected, () => {
+                        this.isConnected = false;
+                        this.updateStatus('Disconnected', 'disconnected');
+                        this.joinStreamBtn.disabled = false;
+                        this.leaveStreamBtn.disabled = true;
+                        this.roomNameEl.textContent = 'Not connected';
+                        this.identityEl.textContent = 'Not set';
+                        this.videoQualityEl.textContent = '-';
+                        this.noStreamMessage.style.display = 'block';
+                        this.streamStatusText.textContent = 'Disconnected';
+                        this.loadingSpinner.style.display = 'none';
+                        this.updateParticipantsList();
+                    });
+
+                    await this.room.connect(tokenData.url, tokenData.token);
+
+                } catch (error) {
+                    console.error('Error joining stream:', error);
+                    this.updateStatus(`Error: ${error.message}`, 'disconnected');
+                    this.joinStreamBtn.disabled = false;
+                    this.loadingSpinner.style.display = 'none';
+                    this.streamStatusText.textContent = 'Connection failed';
+                }
+            }
+
+            async leaveStream() {
+                if (this.room) {
+                    await this.room.disconnect();
+                    this.room = null;
+                }
+            }
+
+            updateVideoQuality(publication) {
+                if (publication && publication.videoTrack) {
+                    const dimensions = publication.videoTrack.getTrackPublication()?.dimensions;
+                    if (dimensions) {
+                        this.videoQualityEl.textContent = `${dimensions.width}x${dimensions.height}`;
+                    }
+                }
+            }
+
+            updateParticipantsList() {
+                if (!this.room) {
+                    this.participantsListEl.innerHTML = '<div class="participant"><div class="participant-indicator"></div>No participants</div>';
+                    return;
+                }
+
+                const participants = Array.from(this.room.participants.values());
+                participants.push(this.room.localParticipant); // Include self
+
+                if (participants.length === 0) {
+                    this.participantsListEl.innerHTML = '<div class="participant"><div class="participant-indicator"></div>No participants</div>';
+                    return;
+                }
+
+                this.participantsListEl.innerHTML = participants.map(participant => {
+                    const isLocal = participant === this.room.localParticipant;
+                    const hasVideo = Array.from(participant.videoTracks.values()).some(track => track.isSubscribed);
+                    const hasAudio = Array.from(participant.audioTracks.values()).some(track => track.isSubscribed);
+
+                    return `
+                        <div class="participant">
+                            <div class="participant-indicator ${hasVideo || hasAudio ? 'active' : ''}"></div>
+                            ${participant.identity} ${isLocal ? '(You)' : ''}
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            toggleFullscreen() {
+                const presentationArea = document.querySelector('.presentation-area');
+
+                if (!document.fullscreenElement) {
+                    presentationArea.requestFullscreen().catch(err => {
+                        console.error('Error attempting to enable fullscreen:', err);
+                    });
+                } else {
+                    document.exitFullscreen();
+                }
+            }
+
+            startSlidePolling() {
+                this.loadCurrentSlide();
+                this.slideUpdateInterval = setInterval(() => {
+                    this.loadCurrentSlide();
+                }, 2000); // Poll every 2 seconds
+            }
+
+            async loadCurrentSlide() {
+                try {
+                    const response = await fetch('/api/current-slide');
+                    const slide = await response.json();
+
+                    if (!this.currentSlide || this.currentSlide.id !== slide.id) {
+                        this.currentSlide = slide;
+                        this.updateChart(slide);
+                    }
+                } catch (error) {
+                    console.error('Error loading slide:', error);
+                }
+            }
+
+            updateChart(slide) {
+                let option;
+
+                switch (slide.chart_type) {
+                    case 'line':
+                        option = {
+                            title: { text: slide.title, left: 'center' },
+                            xAxis: { type: 'category', data: slide.data.xAxis },
+                            yAxis: { type: 'value' },
+                            series: [{
+                                data: slide.data.series,
+                                type: 'line',
+                                smooth: true,
+                                lineStyle: { width: 3 },
+                                animationDuration: 2000,
+                                animationEasing: 'quartInOut'
+                            }]
+                        };
+                        break;
+                    case 'bar':
+                        option = {
+                            title: { text: slide.title, left: 'center' },
+                            xAxis: { type: 'category', data: slide.data.xAxis },
+                            yAxis: { type: 'value' },
+                            series: [{
+                                data: slide.data.series,
+                                type: 'bar',
+                                animationDuration: 2000,
+                                animationEasing: 'quartInOut'
+                            }]
+                        };
+                        break;
+                    case 'pie':
+                        option = {
+                            title: { text: slide.title, left: 'center' },
+                            series: [{
+                                name: slide.title,
+                                type: 'pie',
+                                radius: '70%',
+                                data: slide.data,
+                                emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.5)' } },
+                                animationDuration: 2000,
+                                animationEasing: 'quartInOut'
+                            }]
+                        };
+                        break;
+                    case 'scatter':
+                        option = {
+                            title: { text: slide.title, left: 'center' },
+                            xAxis: { type: 'value' },
+                            yAxis: { type: 'value' },
+                            series: [{
+                                symbolSize: 10,
+                                data: slide.data,
+                                type: 'scatter',
+                                animationDuration: 2000,
+                                animationEasing: 'quartInOut'
+                            }]
+                        };
+                        break;
+                }
+
+                this.chart.setOption(option, true);
+            }
+        }
+
+        // Initialize the viewer app
+        const viewerApp = new ViewerApp();
+    </script>
+</body>
+</html>

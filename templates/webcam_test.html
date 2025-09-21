@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webcam Test - Laser Presentation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #1a1a2e;
+            color: white;
+            padding: 20px;
+        }
+
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #2a2a2a;
+            border-radius: 12px;
+            padding: 30px;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        select, input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #555;
+            border-radius: 6px;
+            background: #333;
+            color: white;
+            font-size: 16px;
+        }
+
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        button.stop {
+            background: #dc3545;
+        }
+
+        button.stop:hover {
+            background: #c82333;
+        }
+
+        .video-preview {
+            margin-top: 20px;
+            padding: 20px;
+            background: #1f1f1f;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        video {
+            width: 320px;
+            height: 240px;
+            background: #000;
+            border-radius: 8px;
+        }
+
+        .status {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 6px;
+            font-weight: bold;
+        }
+
+        .status.success {
+            background: #28a745;
+        }
+
+        .status.error {
+            background: #dc3545;
+        }
+
+        .status.info {
+            background: #17a2b8;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>📹 Webcam & Video Test Page</h1>
+        <p>Test the video streaming functionality before using in the presentation.</p>
+
+        <div class="control-group">
+            <label for="video-type">Video Source Type:</label>
+            <select id="video-type">
+                <option value="webcam">Local Webcam</option>
+                <option value="youtube">YouTube Video</option>
+                <option value="vimeo">Vimeo Video</option>
+                <option value="twitch">Twitch Stream</option>
+                <option value="jitsi">Jitsi Meet</option>
+            </select>
+        </div>
+
+        <div class="control-group" id="url-group" style="display: none;">
+            <label for="video-url">Video URL:</label>
+            <input type="text" id="video-url" placeholder="Enter video URL">
+        </div>
+
+        <div class="control-group" id="room-group">
+            <label for="room-id">Room ID (optional for webcam):</label>
+            <input type="text" id="room-id" placeholder="Leave empty for auto-generated ID">
+        </div>
+
+        <div>
+            <button id="start-video">Start Video Stream</button>
+            <button id="stop-video" class="stop">Stop Video Stream</button>
+            <button id="test-webcam">Test Local Webcam Only</button>
+        </div>
+
+        <div class="video-preview">
+            <h3>Local Webcam Preview:</h3>
+            <video id="local-video" autoplay muted></video>
+            <div id="status" class="status info">Ready to test webcam</div>
+        </div>
+    </div>
+
+    <script>
+        const videoTypeSelect = document.getElementById('video-type');
+        const urlGroup = document.getElementById('url-group');
+        const roomGroup = document.getElementById('room-group');
+        const videoUrlInput = document.getElementById('video-url');
+        const roomIdInput = document.getElementById('room-id');
+        const startVideoBtn = document.getElementById('start-video');
+        const stopVideoBtn = document.getElementById('stop-video');
+        const testWebcamBtn = document.getElementById('test-webcam');
+        const localVideo = document.getElementById('local-video');
+        const status = document.getElementById('status');
+
+        let currentStream = null;
+
+        function updateStatus(message, type = 'info') {
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+
+        // Update form fields based on video type
+        videoTypeSelect.addEventListener('change', () => {
+            const videoType = videoTypeSelect.value;
+
+            if (videoType === 'webcam' || videoType === 'jitsi') {
+                urlGroup.style.display = 'none';
+                roomGroup.style.display = 'block';
+            } else {
+                urlGroup.style.display = 'block';
+                roomGroup.style.display = 'none';
+
+                switch (videoType) {
+                    case 'youtube':
+                        videoUrlInput.placeholder = 'e.g., https://youtube.com/watch?v=dQw4w9WgXcQ';
+                        break;
+                    case 'vimeo':
+                        videoUrlInput.placeholder = 'e.g., https://vimeo.com/123456789';
+                        break;
+                    case 'twitch':
+                        videoUrlInput.placeholder = 'e.g., https://twitch.tv/username';
+                        break;
+                }
+            }
+        });
+
+        // Test local webcam only
+        testWebcamBtn.addEventListener('click', async () => {
+            try {
+                updateStatus('Requesting webcam access...', 'info');
+
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: 320, height: 240 },
+                    audio: false
+                });
+
+                localVideo.srcObject = stream;
+                currentStream = stream;
+                updateStatus('✅ Webcam working! You should see your camera feed above.', 'success');
+            } catch (error) {
+                updateStatus(`❌ Webcam error: ${error.message}`, 'error');
+                console.error('Webcam error:', error);
+            }
+        });
+
+        // Start video stream via API
+        startVideoBtn.addEventListener('click', async () => {
+            try {
+                const videoType = videoTypeSelect.value;
+                const videoUrl = videoUrlInput.value;
+                const roomId = roomIdInput.value;
+
+                if (videoType !== 'webcam' && !videoUrl) {
+                    updateStatus('❌ Please enter a video URL', 'error');
+                    return;
+                }
+
+                updateStatus('Starting video stream...', 'info');
+
+                const response = await fetch('/api/video/start', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        type: videoType,
+                        url: videoUrl,
+                        room_id: roomId
+                    })
+                });
+
+                const result = await response.json();
+                if (result.status === 'success') {
+                    updateStatus(`✅ Video stream started! Type: ${videoType}`, 'success');
+                    if (videoType === 'webcam' && result.video_state.room_id) {
+                        roomIdInput.value = result.video_state.room_id;
+                        updateStatus(`✅ Webcam room created: ${result.video_state.room_id}`, 'success');
+                    }
+
+                    // Also test local webcam if webcam type selected
+                    if (videoType === 'webcam') {
+                        testWebcamBtn.click();
+                    }
+                } else {
+                    updateStatus(`❌ Error: ${result.message}`, 'error');
+                }
+            } catch (error) {
+                updateStatus(`❌ Network error: ${error.message}`, 'error');
+                console.error('Error starting video stream:', error);
+            }
+        });
+
+        // Stop video stream
+        stopVideoBtn.addEventListener('click', async () => {
+            try {
+                // Stop local stream
+                if (currentStream) {
+                    currentStream.getTracks().forEach(track => track.stop());
+                    localVideo.srcObject = null;
+                    currentStream = null;
+                }
+
+                // Stop server stream
+                const response = await fetch('/api/video/stop', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                const result = await response.json();
+                if (result.status === 'success') {
+                    updateStatus('✅ Video stream stopped', 'success');
+                } else {
+                    updateStatus('❌ Error stopping stream', 'error');
+                }
+            } catch (error) {
+                updateStatus(`❌ Error: ${error.message}`, 'error');
+                console.error('Error stopping video stream:', error);
+            }
+        });
+
+        // Initialize form
+        videoTypeSelect.dispatchEvent(new Event('change'));
+        updateStatus('📹 Ready to test video streaming!', 'info');
+    </script>
+</body>
+</html>

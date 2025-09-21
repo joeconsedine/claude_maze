@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presenter - Live Presentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0a0a;
+            color: white;
+            overflow: hidden;
+        }
+
+        .presenter-layout {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            height: 100vh;
+            gap: 10px;
+            padding: 10px;
+        }
+
+        .presentation-area {
+            background: #1a1a1a;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .slide-container {
+            flex: 1;
+            position: relative;
+            background: white;
+            margin: 20px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .presenter-panel {
+            background: #2a2a2a;
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .video-preview {
+            background: #1f1f1f;
+            border-radius: 8px;
+            aspect-ratio: 16/9;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #localVideo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .control-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        button.active {
+            background: #28a745;
+        }
+
+        button.danger {
+            background: #dc3545;
+        }
+
+        button.danger:hover {
+            background: #c82333;
+        }
+
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status.connected {
+            background: #28a745;
+        }
+
+        .status.connecting {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        .status.disconnected {
+            background: #dc3545;
+        }
+
+        .room-info {
+            background: #1f1f1f;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .room-info h3 {
+            margin-bottom: 8px;
+            color: #007bff;
+        }
+
+        .room-info p {
+            margin: 4px 0;
+            color: #ccc;
+        }
+
+        .slide-navigation {
+            background: #1f1f1f;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .slide-navigation h3 {
+            margin-bottom: 10px;
+            color: #007bff;
+            font-size: 14px;
+        }
+
+        .slide-nav-buttons {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .slide-nav-buttons button {
+            font-size: 12px;
+            padding: 8px;
+        }
+
+        .current-slide-info {
+            font-size: 12px;
+            color: #ccc;
+            text-align: center;
+        }
+
+        #slideChart {
+            width: 100%;
+            height: 100%;
+        }
+
+        .video-off-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #666;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script src="https://unpkg.com/livekit-client/dist/livekit-client.umd.js"></script>
+</head>
+<body>
+    <div class="presenter-layout">
+        <div class="presentation-area">
+            <div class="slide-container">
+                <div id="slideChart"></div>
+            </div>
+        </div>
+
+        <div class="presenter-panel">
+            <div class="video-preview">
+                <video id="localVideo" autoplay muted></video>
+                <div class="video-off-message" id="videoOffMessage" style="display: none;">
+                    📹 Camera Off
+                </div>
+            </div>
+
+            <div class="controls">
+                <div class="control-row">
+                    <button id="toggleCamera">📹 Camera</button>
+                    <button id="toggleMic">🎤 Mic</button>
+                </div>
+                <div class="control-row">
+                    <button id="startStream">Start Stream</button>
+                    <button id="stopStream" class="danger" disabled>Stop Stream</button>
+                </div>
+            </div>
+
+            <div class="status disconnected" id="connectionStatus">
+                Disconnected
+            </div>
+
+            <div class="room-info">
+                <h3>Stream Info</h3>
+                <p><strong>Room:</strong> <span id="roomName">Not connected</span></p>
+                <p><strong>Identity:</strong> <span id="identity">Not set</span></p>
+                <p><strong>Viewers:</strong> <span id="viewerCount">0</span></p>
+            </div>
+
+            <div class="slide-navigation">
+                <h3>Slide Control</h3>
+                <div class="slide-nav-buttons">
+                    <button id="prevSlide">← Prev</button>
+                    <button id="nextSlide">Next →</button>
+                </div>
+                <div class="current-slide-info" id="slideInfo">
+                    Slide 1 of 4
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class PresenterApp {
+            constructor() {
+                this.room = null;
+                this.localTracks = {};
+                this.isConnected = false;
+                this.cameraEnabled = false;
+                this.micEnabled = false;
+                this.currentSlide = null;
+                this.chart = null;
+
+                this.initializeElements();
+                this.setupEventListeners();
+                this.initializeChart();
+                this.loadCurrentSlide();
+            }
+
+            initializeElements() {
+                this.localVideo = document.getElementById('localVideo');
+                this.toggleCameraBtn = document.getElementById('toggleCamera');
+                this.toggleMicBtn = document.getElementById('toggleMic');
+                this.startStreamBtn = document.getElementById('startStream');
+                this.stopStreamBtn = document.getElementById('stopStream');
+                this.connectionStatus = document.getElementById('connectionStatus');
+                this.roomNameEl = document.getElementById('roomName');
+                this.identityEl = document.getElementById('identity');
+                this.viewerCountEl = document.getElementById('viewerCount');
+                this.slideInfoEl = document.getElementById('slideInfo');
+                this.videoOffMessage = document.getElementById('videoOffMessage');
+            }
+
+            setupEventListeners() {
+                this.toggleCameraBtn.addEventListener('click', () => this.toggleCamera());
+                this.toggleMicBtn.addEventListener('click', () => this.toggleMic());
+                this.startStreamBtn.addEventListener('click', () => this.startStream());
+                this.stopStreamBtn.addEventListener('click', () => this.stopStream());
+
+                document.getElementById('prevSlide').addEventListener('click', () => this.previousSlide());
+                document.getElementById('nextSlide').addEventListener('click', () => this.nextSlide());
+            }
+
+            initializeChart() {
+                this.chart = echarts.init(document.getElementById('slideChart'));
+                this.chart.setOption({
+                    backgroundColor: 'transparent',
+                    title: {
+                        text: 'Loading...',
+                        left: 'center',
+                        top: 'middle',
+                        textStyle: { color: '#333', fontSize: 24 }
+                    }
+                });
+            }
+
+            updateStatus(message, type) {
+                this.connectionStatus.textContent = message;
+                this.connectionStatus.className = `status ${type}`;
+            }
+
+            async toggleCamera() {
+                try {
+                    if (!this.cameraEnabled) {
+                        const videoTrack = await LiveKitClient.createLocalVideoTrack({
+                            resolution: LiveKitClient.VideoPresets.h720.resolution
+                        });
+                        this.localTracks.camera = videoTrack;
+                        videoTrack.attach(this.localVideo);
+                        this.cameraEnabled = true;
+                        this.toggleCameraBtn.classList.add('active');
+                        this.videoOffMessage.style.display = 'none';
+
+                        if (this.room && this.isConnected) {
+                            await this.room.localParticipant.publishTrack(videoTrack);
+                        }
+                    } else {
+                        if (this.localTracks.camera) {
+                            if (this.room && this.isConnected) {
+                                await this.room.localParticipant.unpublishTrack(this.localTracks.camera);
+                            }
+                            this.localTracks.camera.stop();
+                            delete this.localTracks.camera;
+                        }
+                        this.localVideo.srcObject = null;
+                        this.cameraEnabled = false;
+                        this.toggleCameraBtn.classList.remove('active');
+                        this.videoOffMessage.style.display = 'block';
+                    }
+                } catch (error) {
+                    console.error('Error toggling camera:', error);
+                    this.updateStatus('Camera error', 'disconnected');
+                }
+            }
+
+            async toggleMic() {
+                try {
+                    if (!this.micEnabled) {
+                        const audioTrack = await LiveKitClient.createLocalAudioTrack();
+                        this.localTracks.microphone = audioTrack;
+                        this.micEnabled = true;
+                        this.toggleMicBtn.classList.add('active');
+
+                        if (this.room && this.isConnected) {
+                            await this.room.localParticipant.publishTrack(audioTrack);
+                        }
+                    } else {
+                        if (this.localTracks.microphone) {
+                            if (this.room && this.isConnected) {
+                                await this.room.localParticipant.unpublishTrack(this.localTracks.microphone);
+                            }
+                            this.localTracks.microphone.stop();
+                            delete this.localTracks.microphone;
+                        }
+                        this.micEnabled = false;
+                        this.toggleMicBtn.classList.remove('active');
+                    }
+                } catch (error) {
+                    console.error('Error toggling microphone:', error);
+                    this.updateStatus('Microphone error', 'disconnected');
+                }
+            }
+
+            async startStream() {
+                try {
+                    this.updateStatus('Connecting...', 'connecting');
+                    this.startStreamBtn.disabled = true;
+
+                    // Get token from backend
+                    const response = await fetch('/api/token', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            room: 'presentation-room',
+                            identity: `presenter-${Date.now()}`
+                        })
+                    });
+
+                    const tokenData = await response.json();
+                    if (tokenData.error) {
+                        throw new Error(tokenData.error);
+                    }
+
+                    // Connect to LiveKit room
+                    this.room = new LiveKitClient.Room();
+
+                    this.room.on(LiveKitClient.RoomEvent.Connected, () => {
+                        this.isConnected = true;
+                        this.updateStatus('Connected', 'connected');
+                        this.stopStreamBtn.disabled = false;
+                        this.roomNameEl.textContent = tokenData.room;
+                        this.identityEl.textContent = tokenData.identity;
+                    });
+
+                    this.room.on(LiveKitClient.RoomEvent.ParticipantConnected, (participant) => {
+                        this.updateViewerCount();
+                    });
+
+                    this.room.on(LiveKitClient.RoomEvent.ParticipantDisconnected, (participant) => {
+                        this.updateViewerCount();
+                    });
+
+                    this.room.on(LiveKitClient.RoomEvent.Disconnected, () => {
+                        this.isConnected = false;
+                        this.updateStatus('Disconnected', 'disconnected');
+                        this.startStreamBtn.disabled = false;
+                        this.stopStreamBtn.disabled = true;
+                        this.roomNameEl.textContent = 'Not connected';
+                        this.identityEl.textContent = 'Not set';
+                        this.viewerCountEl.textContent = '0';
+                    });
+
+                    await this.room.connect(tokenData.url, tokenData.token);
+
+                    // Publish existing tracks
+                    for (const track of Object.values(this.localTracks)) {
+                        await this.room.localParticipant.publishTrack(track);
+                    }
+
+                } catch (error) {
+                    console.error('Error starting stream:', error);
+                    this.updateStatus(`Error: ${error.message}`, 'disconnected');
+                    this.startStreamBtn.disabled = false;
+                }
+            }
+
+            async stopStream() {
+                if (this.room) {
+                    await this.room.disconnect();
+                    this.room = null;
+                }
+            }
+
+            updateViewerCount() {
+                if (this.room) {
+                    // Subtract 1 to exclude the presenter
+                    const viewerCount = Math.max(0, this.room.participants.size);
+                    this.viewerCountEl.textContent = viewerCount.toString();
+                }
+            }
+
+            async loadCurrentSlide() {
+                try {
+                    const response = await fetch('/api/current-slide');
+                    const slide = await response.json();
+                    this.currentSlide = slide;
+                    this.updateChart(slide);
+                    this.updateSlideInfo();
+                } catch (error) {
+                    console.error('Error loading slide:', error);
+                }
+            }
+
+            updateChart(slide) {
+                let option;
+
+                switch (slide.chart_type) {
+                    case 'line':
+                        option = {
+                            title: { text: slide.title, left: 'center' },
+                            xAxis: { type: 'category', data: slide.data.xAxis },
+                            yAxis: { type: 'value' },
+                            series: [{
+                                data: slide.data.series,
+                                type: 'line',
+                                smooth: true,
+                                lineStyle: { width: 3 },
+                                animationDuration: 2000,
+                                animationEasing: 'quartInOut'
+                            }]
+                        };
+                        break;
+                    case 'bar':
+                        option = {
+                            title: { text: slide.title, left: 'center' },
+                            xAxis: { type: 'category', data: slide.data.xAxis },
+                            yAxis: { type: 'value' },
+                            series: [{
+                                data: slide.data.series,
+                                type: 'bar',
+                                animationDuration: 2000,
+                                animationEasing: 'quartInOut'
+                            }]
+                        };
+                        break;
+                    case 'pie':
+                        option = {
+                            title: { text: slide.title, left: 'center' },
+                            series: [{
+                                name: slide.title,
+                                type: 'pie',
+                                radius: '70%',
+                                data: slide.data,
+                                emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.5)' } },
+                                animationDuration: 2000,
+                                animationEasing: 'quartInOut'
+                            }]
+                        };
+                        break;
+                    case 'scatter':
+                        option = {
+                            title: { text: slide.title, left: 'center' },
+                            xAxis: { type: 'value' },
+                            yAxis: { type: 'value' },
+                            series: [{
+                                symbolSize: 10,
+                                data: slide.data,
+                                type: 'scatter',
+                                animationDuration: 2000,
+                                animationEasing: 'quartInOut'
+                            }]
+                        };
+                        break;
+                }
+
+                this.chart.setOption(option, true);
+            }
+
+            async updateSlideInfo() {
+                try {
+                    const response = await fetch('/api/slides');
+                    const data = await response.json();
+                    this.slideInfoEl.textContent = `Slide ${data.current_index + 1} of ${data.total}`;
+                } catch (error) {
+                    console.error('Error updating slide info:', error);
+                }
+            }
+
+            async previousSlide() {
+                try {
+                    const response = await fetch('/api/previous-slide');
+                    const slide = await response.json();
+                    this.currentSlide = slide;
+                    this.updateChart(slide);
+                    this.updateSlideInfo();
+                } catch (error) {
+                    console.error('Error going to previous slide:', error);
+                }
+            }
+
+            async nextSlide() {
+                try {
+                    const response = await fetch('/api/next-slide');
+                    const slide = await response.json();
+                    this.currentSlide = slide;
+                    this.updateChart(slide);
+                    this.updateSlideInfo();
+                } catch (error) {
+                    console.error('Error going to next slide:', error);
+                }
+            }
+        }
+
+        // Initialize the presenter app
+        const presenterApp = new PresenterApp();
+    </script>
+</body>
+</html>

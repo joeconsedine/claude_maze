@@ -5,6 +5,8 @@ import os
 import threading
 import logging
 from datetime import datetime
+from livekit import api
+import jwt
 
 # Configure detailed logging
 logging.basicConfig(level=logging.INFO)
@@ -184,6 +186,18 @@ def index():
 def control():
     return render_template('control.html')
 
+@app.route('/webcam-test')
+def webcam_test():
+    return render_template('webcam_test.html')
+
+@app.route('/presenter')
+def presenter():
+    return render_template('presenter.html')
+
+@app.route('/viewer')
+def viewer():
+    return render_template('viewer.html')
+
 @app.route('/api/current-slide')
 def current_slide():
     client_ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.environ.get('REMOTE_ADDR'))
@@ -293,6 +307,48 @@ def stop_video_stream():
 @app.route('/api/video/state')
 def get_video_state():
     return jsonify(slide_controller.get_video_state())
+
+# LiveKit token generation endpoint
+@app.route('/api/token', methods=['POST'])
+def generate_livekit_token():
+    try:
+        data = request.get_json()
+        room_name = data.get('room', 'presentation-room')
+        participant_name = data.get('identity', f'user-{int(time.time())}')
+
+        # Get LiveKit credentials from environment
+        api_key = os.environ.get('LIVEKIT_API_KEY')
+        api_secret = os.environ.get('LIVEKIT_API_SECRET')
+
+        if not api_key or not api_secret:
+            return jsonify({'error': 'LiveKit credentials not configured'}), 500
+
+        # Create access token
+        token = api.AccessToken(api_key, api_secret) \
+            .with_identity(participant_name) \
+            .with_name(participant_name) \
+            .with_grants(api.VideoGrants(
+                room_join=True,
+                room=room_name,
+                can_publish=True,
+                can_subscribe=True
+            ))
+
+        jwt_token = token.to_jwt()
+        livekit_url = os.environ.get('LIVEKIT_URL', 'wss://localhost:7880')
+
+        logger.info(f"🎟️ Generated LiveKit token for {participant_name} in room {room_name}")
+
+        return jsonify({
+            'token': jwt_token,
+            'url': livekit_url,
+            'room': room_name,
+            'identity': participant_name
+        })
+
+    except Exception as e:
+        logger.error(f"Error generating LiveKit token: {e}")
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
