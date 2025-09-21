@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LiveKit Connection Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #0a0a0a;
+            color: white;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .test-container {
+            background: #1a1a1a;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .test-result {
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+
+        .success {
+            background: #28a745;
+        }
+
+        .error {
+            background: #dc3545;
+        }
+
+        .info {
+            background: #17a2b8;
+        }
+
+        .test-step {
+            border-left: 4px solid #007bff;
+            padding-left: 15px;
+            margin: 20px 0;
+        }
+
+        pre {
+            background: #2a2a2a;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 LiveKit Connection Test</h1>
+
+    <div class="test-container">
+        <h2>Step 1: Test Token Generation</h2>
+        <p>First, let's test if our backend can generate LiveKit tokens.</p>
+        <button id="testToken">Test Token Generation</button>
+        <div id="tokenResult"></div>
+    </div>
+
+    <div class="test-container">
+        <h2>Step 2: Test LiveKit Client Loading</h2>
+        <p>Check if LiveKit client library loads properly.</p>
+        <button id="testClient">Test Client Loading</button>
+        <div id="clientResult"></div>
+    </div>
+
+    <div class="test-container">
+        <h2>Step 3: Test LiveKit Connection</h2>
+        <p>Try to connect to LiveKit cloud service.</p>
+        <button id="testConnection" disabled>Test Connection</button>
+        <div id="connectionResult"></div>
+    </div>
+
+    <div class="test-container">
+        <h2>Step 4: Test Basic Room Operations</h2>
+        <p>Create a room and test basic operations.</p>
+        <button id="testRoom" disabled>Test Room</button>
+        <div id="roomResult"></div>
+    </div>
+
+    <script>
+        class LiveKitTester {
+            constructor() {
+                this.tokenData = null;
+                this.room = null;
+                this.setupEventListeners();
+            }
+
+            setupEventListeners() {
+                document.getElementById('testToken').addEventListener('click', () => this.testTokenGeneration());
+                document.getElementById('testClient').addEventListener('click', () => this.testClientLoading());
+                document.getElementById('testConnection').addEventListener('click', () => this.testConnection());
+                document.getElementById('testRoom').addEventListener('click', () => this.testRoom());
+            }
+
+            showResult(elementId, message, type = 'info') {
+                const element = document.getElementById(elementId);
+                element.innerHTML = `<div class="test-result ${type}">${message}</div>`;
+            }
+
+            async testTokenGeneration() {
+                this.showResult('tokenResult', 'Testing token generation...', 'info');
+
+                try {
+                    const response = await fetch('/api/token', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            room: 'test-room',
+                            identity: `test-user-${Date.now()}`
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok && data.token) {
+                        this.tokenData = data;
+                        this.showResult('tokenResult',
+                            `✅ Token generated successfully!\n\nRoom: ${data.room}\nIdentity: ${data.identity}\nURL: ${data.url}\nToken: ${data.token.substring(0, 50)}...`,
+                            'success'
+                        );
+                        document.getElementById('testClient').disabled = false;
+                    } else {
+                        this.showResult('tokenResult',
+                            `❌ Token generation failed:\n${JSON.stringify(data, null, 2)}`,
+                            'error'
+                        );
+                    }
+                } catch (error) {
+                    this.showResult('tokenResult',
+                        `❌ Network error:\n${error.message}`,
+                        'error'
+                    );
+                }
+            }
+
+            async testClientLoading() {
+                this.showResult('clientResult', 'Testing LiveKit client loading...', 'info');
+
+                try {
+                    // Try to load LiveKit client
+                    await this.loadLiveKitClient();
+
+                    if (typeof LiveKitClient !== 'undefined') {
+                        this.showResult('clientResult',
+                            `✅ LiveKit client loaded successfully!\n\nVersion: ${LiveKitClient.version || 'Unknown'}\nAvailable classes: Room, LocalParticipant, RemoteParticipant`,
+                            'success'
+                        );
+                        document.getElementById('testConnection').disabled = false;
+                    } else {
+                        this.showResult('clientResult',
+                            '❌ LiveKit client not available after loading',
+                            'error'
+                        );
+                    }
+                } catch (error) {
+                    this.showResult('clientResult',
+                        `❌ Client loading failed:\n${error.message}`,
+                        'error'
+                    );
+                }
+            }
+
+            async loadLiveKitClient() {
+                return new Promise((resolve, reject) => {
+                    if (typeof LiveKitClient !== 'undefined') {
+                        resolve();
+                        return;
+                    }
+
+                    const script = document.createElement('script');
+                    script.src = 'https://unpkg.com/livekit-client@2.8.1/dist/livekit-client.umd.js';
+                    script.crossOrigin = 'anonymous';
+                    script.onload = () => {
+                        // Wait a bit for the global to be available
+                        setTimeout(() => {
+                            if (typeof LiveKitClient !== 'undefined') {
+                                resolve();
+                            } else {
+                                reject(new Error('LiveKit client not available after script load'));
+                            }
+                        }, 100);
+                    };
+                    script.onerror = () => reject(new Error('Failed to load LiveKit client script'));
+                    document.head.appendChild(script);
+                });
+            }
+
+            async testConnection() {
+                if (!this.tokenData) {
+                    this.showResult('connectionResult', '❌ No token data available. Run token test first.', 'error');
+                    return;
+                }
+
+                this.showResult('connectionResult', 'Testing LiveKit connection...', 'info');
+
+                try {
+                    this.room = new LiveKitClient.Room({
+                        adaptiveStream: true,
+                        dynacast: true,
+                    });
+
+                    // Set up event listeners
+                    this.room.on(LiveKitClient.RoomEvent.Connected, () => {
+                        this.showResult('connectionResult',
+                            `✅ Connected to LiveKit!\n\nRoom: ${this.room.name}\nSID: ${this.room.sid}\nParticipants: ${this.room.participants.size}`,
+                            'success'
+                        );
+                        document.getElementById('testRoom').disabled = false;
+                    });
+
+                    this.room.on(LiveKitClient.RoomEvent.Disconnected, (reason) => {
+                        this.showResult('connectionResult',
+                            `🔌 Disconnected from LiveKit\nReason: ${reason}`,
+                            'info'
+                        );
+                    });
+
+                    this.room.on(LiveKitClient.RoomEvent.ConnectionStateChanged, (state) => {
+                        this.showResult('connectionResult',
+                            `🔄 Connection state: ${state}`,
+                            'info'
+                        );
+                    });
+
+                    // Connect to the room
+                    await this.room.connect(this.tokenData.url, this.tokenData.token);
+
+                } catch (error) {
+                    this.showResult('connectionResult',
+                        `❌ Connection failed:\n${error.message}\n\nStack:\n${error.stack}`,
+                        'error'
+                    );
+                }
+            }
+
+            async testRoom() {
+                if (!this.room || !this.room.isConnected) {
+                    this.showResult('roomResult', '❌ Not connected to room. Run connection test first.', 'error');
+                    return;
+                }
+
+                this.showResult('roomResult', 'Testing room operations...', 'info');
+
+                try {
+                    const results = [];
+
+                    // Test 1: Room info
+                    results.push(`Room Name: ${this.room.name}`);
+                    results.push(`Room SID: ${this.room.sid}`);
+                    results.push(`Local Participant: ${this.room.localParticipant.identity}`);
+                    results.push(`Participants Count: ${this.room.participants.size}`);
+
+                    // Test 2: Try to get user media (optional)
+                    try {
+                        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                        results.push(`✅ Camera access: Available`);
+                        stream.getTracks().forEach(track => track.stop()); // Clean up
+                    } catch (mediaError) {
+                        results.push(`⚠️ Camera access: ${mediaError.message}`);
+                    }
+
+                    // Test 3: Metadata
+                    results.push(`Room Metadata: ${this.room.metadata || 'None'}`);
+                    results.push(`Connection Quality: ${this.room.localParticipant.connectionQuality || 'Unknown'}`);
+
+                    this.showResult('roomResult',
+                        `✅ Room operations successful!\n\n${results.join('\n')}`,
+                        'success'
+                    );
+
+                } catch (error) {
+                    this.showResult('roomResult',
+                        `❌ Room operations failed:\n${error.message}`,
+                        'error'
+                    );
+                }
+            }
+        }
+
+        // Initialize tester when page loads
+        const tester = new LiveKitTester();
+    </script>
+</body>
+</html>
