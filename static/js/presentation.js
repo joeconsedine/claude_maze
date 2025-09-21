@@ -8,7 +8,6 @@ class PresentationController {
         this.chartContainer = document.getElementById('chart');
         this.pollCount = 0;
         this.laserOverlay = null;
-        this.socket = null;
 
         console.log('🔧 PresentationController starting - timestamp:', new Date().toISOString());
         console.log('🌐 User Agent:', navigator.userAgent);
@@ -16,8 +15,6 @@ class PresentationController {
         console.log('🔗 Referrer:', document.referrer);
 
         this.initChart();
-        this.initLaserOverlay();
-        this.initWebSocket();
         this.loadCurrentSlide();
         this.startPolling();
     }
@@ -312,67 +309,6 @@ class PresentationController {
         this.chart.setOption(option, true);
     }
 
-    initLaserOverlay() {
-        console.log('🔴 Initializing laser overlay for presentation');
-        const presentationContainer = document.querySelector('.presentation-container');
-        this.laserOverlay = new LaserOverlay(presentationContainer);
-        this.laserOverlay.setColor('#00ff88', '#44ff88'); // Green laser for presentation
-
-        // Disable pointer events since this will be controlled remotely
-        this.laserOverlay.container.style.pointerEvents = 'none';
-    }
-
-    initWebSocket() {
-        console.log('🔌 Initializing WebSocket connection');
-        this.socket = io();
-
-        this.socket.on('connect', () => {
-            console.log('✅ Connected to WebSocket server');
-            this.socket.emit('join_presentation');
-        });
-
-        this.socket.on('disconnect', () => {
-            console.log('❌ Disconnected from WebSocket server');
-        });
-
-        this.socket.on('laser_point', (data) => {
-            console.log('🔴 Received laser point:', data);
-            this.handleRemoteLaserPoint(data);
-        });
-
-        this.socket.on('laser_clear', () => {
-            console.log('🧹 Received laser clear command');
-            this.clearLaserTrails();
-        });
-
-        this.socket.on('connect_error', (error) => {
-            console.error('🚨 WebSocket connection error:', error);
-        });
-    }
-
-    handleRemoteLaserPoint(data) {
-        if (!this.laserOverlay) return;
-
-        // Convert controller coordinates to presentation coordinates
-        const presentationRect = this.laserOverlay.container.getBoundingClientRect();
-
-        // Scale coordinates from controller to presentation
-        // Assuming controller preview is smaller than main presentation
-        const scaleX = presentationRect.width / (data.containerWidth || presentationRect.width);
-        const scaleY = presentationRect.height / (data.containerHeight || presentationRect.height);
-
-        const scaledX = data.x * scaleX;
-        const scaledY = data.y * scaleY;
-
-        // Add laser point with scaled coordinates
-        this.laserOverlay.addLaserPoint(scaledX, scaledY, data.intensity || 1.0);
-    }
-
-    clearLaserTrails() {
-        if (this.laserOverlay) {
-            this.laserOverlay.laserTrails = [];
-        }
-    }
 
     startPolling() {
         console.log('🔄 Starting polling every 2 seconds for slide changes');

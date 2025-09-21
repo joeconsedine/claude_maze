@@ -5,7 +5,6 @@ class SlidePreview {
         this.chartInstance = null;
         this.currentSlideData = null;
         this.laserOverlay = null;
-        this.socket = null;
         this.isLaserActive = false;
 
         this.init();
@@ -14,7 +13,6 @@ class SlidePreview {
     init() {
         this.createPreviewContainer();
         this.setupLaserOverlay();
-        this.initWebSocket();
         this.loadCurrentSlide();
         this.startPolling();
     }
@@ -152,25 +150,6 @@ class SlidePreview {
         this.laserOverlay = new LaserOverlay(previewContent);
         this.laserOverlay.setColor('#ff4444', '#ff6666'); // Red laser for controller
 
-        // Override laser overlay methods to send WebSocket data
-        const originalAddLaserPoint = this.laserOverlay.addLaserPoint.bind(this.laserOverlay);
-        this.laserOverlay.addLaserPoint = (x, y, intensity) => {
-            // Call original method
-            originalAddLaserPoint(x, y, intensity);
-
-            // Send to presentations if laser is active
-            if (this.isLaserActive && this.socket) {
-                const containerRect = previewContent.getBoundingClientRect();
-                this.socket.emit('laser_point', {
-                    x: x,
-                    y: y,
-                    intensity: intensity,
-                    containerWidth: containerRect.width,
-                    containerHeight: containerRect.height,
-                    timestamp: Date.now()
-                });
-            }
-        };
     }
 
     setupLaserToggle() {
@@ -188,32 +167,10 @@ class SlidePreview {
                 toggleBtn.classList.remove('active');
                 this.laserOverlay.container.style.pointerEvents = 'none';
                 this.laserOverlay.laserTrails = []; // Clear existing trails
-
-                // Send clear command to presentations
-                if (this.socket) {
-                    this.socket.emit('laser_clear');
-                }
             }
         });
     }
 
-    initWebSocket() {
-        console.log('🔌 Initializing WebSocket connection for controller');
-        this.socket = io();
-
-        this.socket.on('connect', () => {
-            console.log('✅ Controller connected to WebSocket server');
-            this.socket.emit('join_controller');
-        });
-
-        this.socket.on('disconnect', () => {
-            console.log('❌ Controller disconnected from WebSocket server');
-        });
-
-        this.socket.on('connect_error', (error) => {
-            console.error('🚨 Controller WebSocket connection error:', error);
-        });
-    }
 
     async loadCurrentSlide() {
         try {
