@@ -9,9 +9,11 @@ class ControlPanel {
         this.slides = [];
         this.currentIndex = 0;
         this.totalSlides = 0;
+        this.slidePreview = null;
 
         this.initEventListeners();
         this.loadSlides();
+        this.initSlidePreview();
         this.startPolling();
     }
 
@@ -124,6 +126,18 @@ class ControlPanel {
             'scatter': 'Scatter Plot'
         };
         return typeMap[type] || type;
+    }
+
+    initSlidePreview() {
+        // Insert slide preview after the navigation controls
+        const navigationControls = document.querySelector('.navigation-controls');
+        const previewContainer = document.createElement('div');
+        previewContainer.className = 'slide-preview-wrapper';
+
+        // Insert after navigation controls
+        navigationControls.parentNode.insertBefore(previewContainer, navigationControls.nextSibling);
+
+        this.slidePreview = new SlidePreview(previewContainer);
     }
 
     startPolling() {
