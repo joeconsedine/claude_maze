@@ -15,6 +15,7 @@ class PresentationController {
         console.log('🔗 Referrer:', document.referrer);
 
         this.initChart();
+        this.initLaserOverlay();
         this.loadCurrentSlide();
         this.startPolling();
     }
@@ -309,6 +310,59 @@ class PresentationController {
         this.chart.setOption(option, true);
     }
 
+
+    initLaserOverlay() {
+        console.log('🔴 Initializing laser overlay for presentation');
+        const presentationContainer = document.querySelector('.presentation-container');
+        this.laserOverlay = new LaserOverlay(presentationContainer);
+        this.laserOverlay.setColor('#00ff88', '#44ff88'); // Green laser for presentation
+
+        // Disable pointer events since this will be controlled remotely
+        this.laserOverlay.container.style.pointerEvents = 'none';
+
+        // Start polling for laser updates
+        this.startLaserPolling();
+    }
+
+    async pollLaserPoints() {
+        try {
+            const response = await fetch('/api/laser/points');
+            const data = await response.json();
+
+            if (data.points && data.points.length > 0) {
+                // Clear existing trails and add new ones
+                this.laserOverlay.laserTrails = [];
+
+                data.points.forEach(point => {
+                    // Scale coordinates from controller to presentation
+                    const presentationRect = this.laserOverlay.container.getBoundingClientRect();
+                    const scaleX = presentationRect.width / point.container_width;
+                    const scaleY = presentationRect.height / point.container_height;
+
+                    const scaledX = point.x * scaleX;
+                    const scaledY = point.y * scaleY;
+
+                    // Calculate fade based on age
+                    const age = Date.now() / 1000 - point.timestamp;
+                    const fadeFactor = Math.max(0, 1 - (age / 5)); // Fade over 5 seconds
+
+                    this.laserOverlay.addLaserPoint(scaledX, scaledY, point.intensity * fadeFactor);
+                });
+            } else {
+                // Clear laser trails if no points
+                this.laserOverlay.laserTrails = [];
+            }
+        } catch (error) {
+            console.error('Error polling laser points:', error);
+        }
+    }
+
+    startLaserPolling() {
+        // Poll laser points every 100ms for smooth updates
+        setInterval(() => {
+            this.pollLaserPoints();
+        }, 100);
+    }
 
     startPolling() {
         console.log('🔄 Starting polling every 2 seconds for slide changes');

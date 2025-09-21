@@ -150,6 +150,40 @@ class SlidePreview {
         this.laserOverlay = new LaserOverlay(previewContent);
         this.laserOverlay.setColor('#ff4444', '#ff6666'); // Red laser for controller
 
+        // Override laser overlay to send points to API
+        const originalAddLaserPoint = this.laserOverlay.addLaserPoint.bind(this.laserOverlay);
+        this.laserOverlay.addLaserPoint = (x, y, intensity) => {
+            // Call original method to show locally
+            originalAddLaserPoint(x, y, intensity);
+
+            // Send to server if laser is active
+            if (this.isLaserActive) {
+                this.sendLaserPoint(x, y, intensity);
+            }
+        };
+    }
+
+    async sendLaserPoint(x, y, intensity) {
+        try {
+            const containerRect = this.previewElement.querySelector('.preview-content').getBoundingClientRect();
+
+            await fetch('/api/laser/point', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    x: x,
+                    y: y,
+                    intensity: intensity,
+                    container_width: containerRect.width,
+                    container_height: containerRect.height,
+                    timestamp: Date.now()
+                })
+            });
+        } catch (error) {
+            console.error('Error sending laser point:', error);
+        }
     }
 
     setupLaserToggle() {
@@ -162,13 +196,43 @@ class SlidePreview {
                 toggleBtn.textContent = '🔴 Laser On';
                 toggleBtn.classList.add('active');
                 this.laserOverlay.container.style.pointerEvents = 'auto';
+                this.setLaserActiveOnServer(true);
             } else {
                 toggleBtn.textContent = '🔴 Laser Off';
                 toggleBtn.classList.remove('active');
                 this.laserOverlay.container.style.pointerEvents = 'none';
                 this.laserOverlay.laserTrails = []; // Clear existing trails
+                this.setLaserActiveOnServer(false);
+                this.clearLaserPointsOnServer();
             }
         });
+    }
+
+    async setLaserActiveOnServer(active) {
+        try {
+            await fetch('/api/laser/active', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ active: active })
+            });
+        } catch (error) {
+            console.error('Error setting laser active on server:', error);
+        }
+    }
+
+    async clearLaserPointsOnServer() {
+        try {
+            await fetch('/api/laser/clear', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+        } catch (error) {
+            console.error('Error clearing laser points on server:', error);
+        }
     }
 
 

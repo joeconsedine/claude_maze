@@ -16,6 +16,9 @@ class SlideController:
     def __init__(self):
         self.current_slide = 0
         self.lock = threading.Lock()
+        self.laser_points = []  # Store active laser points
+        self.laser_active = False
+        self.last_laser_update = time.time()
         logger.info(f"🔧 SlideController initialized - starting at slide {self.current_slide}")
         self.slides = [
             {
@@ -96,6 +99,49 @@ class SlideController:
             logger.warning(f"🎯 GOTO_SLIDE CALLED: {old_slide} → {self.current_slide} (requested: {index}) - Now showing: {slide['title']}")
             return slide
 
+    def add_laser_point(self, x, y, intensity, container_width, container_height):
+        with self.lock:
+            current_time = time.time()
+            # Remove old points (older than 5 seconds)
+            self.laser_points = [p for p in self.laser_points if current_time - p['timestamp'] < 5]
+
+            # Add new point
+            self.laser_points.append({
+                'x': x,
+                'y': y,
+                'intensity': intensity,
+                'container_width': container_width,
+                'container_height': container_height,
+                'timestamp': current_time
+            })
+            self.last_laser_update = current_time
+            logger.debug(f"🔴 Added laser point: ({x}, {y}) - Total points: {len(self.laser_points)}")
+
+    def get_laser_points(self):
+        with self.lock:
+            current_time = time.time()
+            # Remove old points
+            self.laser_points = [p for p in self.laser_points if current_time - p['timestamp'] < 5]
+            return {
+                'points': self.laser_points,
+                'active': self.laser_active,
+                'last_update': self.last_laser_update
+            }
+
+    def set_laser_active(self, active):
+        with self.lock:
+            self.laser_active = active
+            if not active:
+                self.laser_points = []  # Clear points when deactivated
+            self.last_laser_update = time.time()
+            logger.info(f"🔴 Laser set to: {'ON' if active else 'OFF'}")
+
+    def clear_laser_points(self):
+        with self.lock:
+            self.laser_points = []
+            self.last_laser_update = time.time()
+            logger.info("🧹 Laser points cleared")
+
 slide_controller = SlideController()
 
 @app.route('/')
@@ -147,6 +193,42 @@ def goto_slide(index):
     referer = request.environ.get('HTTP_REFERER', 'No referer')
     logger.error(f"🚨 API/GOTO-SLIDE CALLED! Index: {index} - IP: {client_ip} - UA: {user_agent[:50]}... - Referer: {referer}")
     return jsonify(slide_controller.goto_slide(index))
+
+# Laser overlay API endpoints
+@app.route('/api/laser/point', methods=['POST'])
+def add_laser_point():
+    try:
+        data = request.get_json()
+        slide_controller.add_laser_point(
+            data['x'],
+            data['y'],
+            data.get('intensity', 1.0),
+            data.get('container_width', 800),
+            data.get('container_height', 600)
+        )
+        return jsonify({'status': 'success'})
+    except Exception as e:
+        logger.error(f"Error adding laser point: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 400
+
+@app.route('/api/laser/points')
+def get_laser_points():
+    return jsonify(slide_controller.get_laser_points())
+
+@app.route('/api/laser/active', methods=['POST'])
+def set_laser_active():
+    try:
+        data = request.get_json()
+        slide_controller.set_laser_active(data.get('active', False))
+        return jsonify({'status': 'success'})
+    except Exception as e:
+        logger.error(f"Error setting laser active: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 400
+
+@app.route('/api/laser/clear', methods=['POST'])
+def clear_laser_points():
+    slide_controller.clear_laser_points()
+    return jsonify({'status': 'success'})
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
