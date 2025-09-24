@@ -24,14 +24,6 @@
             position: relative;
         }
 
-        .chart-fullscreen {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            z-index: 1;
-        }
 
         .slide-indicator {
             position: fixed;
@@ -192,8 +184,12 @@
         }
 
         #slideChart {
-            width: 100vw;
+            width: 95vw;
             height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1;
         }
 
         .no-stream-message {
@@ -244,9 +240,7 @@
 </head>
 <body>
     <div class="viewer-layout">
-        <div class="chart-fullscreen">
-            <div id="slideChart"></div>
-        </div>
+        <div id="slideChart"></div>
 
         <div class="slide-indicator" id="slideIndicator">
             Slide 1 of 5
@@ -340,7 +334,7 @@
             initializeChart() {
                 const chartElement = document.getElementById('slideChart');
                 this.chart = echarts.init(chartElement, null, {
-                    width: window.innerWidth,
+                    width: window.innerWidth * 0.95,
                     height: window.innerHeight
                 });
                 this.chart.setOption({
@@ -356,7 +350,7 @@
                 // Resize chart when window resizes
                 window.addEventListener('resize', () => {
                     this.chart.resize({
-                        width: window.innerWidth,
+                        width: window.innerWidth * 0.95,
                         height: window.innerHeight
                     });
                 });
