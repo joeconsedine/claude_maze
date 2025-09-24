@@ -14,22 +14,7 @@
         <span id="slide-counter">1 / 4</span>
     </div>
 
-    <!-- LiveKit Stream Viewer (hidden by default) -->
-    <div class="livekit-overlay" id="livekitOverlay" style="display: none; position: fixed; top: 20px; right: 20px; z-index: 10;">
-        <div class="stream-container">
-            <video id="presenterStream" autoplay playsinline></video>
-            <div class="stream-controls">
-                <button id="toggleStreamView">👁️ Toggle Stream</button>
-                <button id="joinStreamBtn">📡 Join Stream</button>
-                <button id="leaveStreamBtn" style="display: none;">❌ Leave</button>
-            </div>
-            <div class="stream-status" id="streamStatus">Stream offline</div>
-        </div>
-    </div>
-
     <script src="{{ url_for('static', filename='js/laser-overlay.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/video-overlay.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/livekit-integration.js') }}"></script>
     <script src="{{ url_for('static', filename='js/presentation.js') }}?v=debug-{{ range(1000, 9999) | random }}"></script>
 </body>
 </html>
