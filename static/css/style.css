@@ -15,9 +15,8 @@ body {
 
 
 #chart {
-    border-radius: 8px;
-    background: #2a2a2a;
-    border: 1px solid #444;
+    background: white;
+    border: none;
 }
 
 .slide-info {
