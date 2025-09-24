@@ -4,7 +4,7 @@ class PresentationController {
         this.currentSlide = null;
         this.currentSlideId = null;
         this.slideCounter = document.getElementById('slide-counter');
-        this.slideTitle = document.getElementById('slide-title');
+        this.slideTitle = document.getElementById('slide-title') || null;
         this.chartContainer = document.getElementById('chart');
         this.pollCount = 0;
         this.laserOverlay = null;
@@ -84,7 +84,9 @@ class PresentationController {
 
     renderSlide(slideData) {
         console.log(`🎨 [${this.pollCount}] RENDERING slide: ${slideData.title} (ID: ${slideData.id})`);
-        this.slideTitle.textContent = slideData.title;
+        if (this.slideTitle) {
+            this.slideTitle.textContent = slideData.title;
+        }
         this.updateSlideCounter();
 
         this.chart.clear();
