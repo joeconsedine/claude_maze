@@ -18,12 +18,6 @@
             overflow: hidden;
         }
 
-        .viewer-layout {
-            display: flex;
-            height: 100vh;
-            position: relative;
-            background: transparent;
-        }
 
 
         .slide-indicator {
@@ -240,47 +234,45 @@
     <script src="https://unpkg.com/livekit-client@2.8.1/dist/livekit-client.umd.js" crossorigin="anonymous"></script>
 </head>
 <body>
-    <div class="viewer-layout">
-        <div id="slideChart"></div>
+    <div id="slideChart"></div>
 
-        <div class="slide-indicator" id="slideIndicator">
-            Slide 1 of 5
+    <div class="slide-indicator" id="slideIndicator">
+        Slide 1 of 5
+    </div>
+
+    <button class="fullscreen-toggle" id="fullscreenToggle">⛶ Fullscreen</button>
+
+    <div class="video-pane">
+        <div class="video-container">
+            <video id="remoteVideo" autoplay playsinline></video>
+            <div class="no-stream-message" id="noStreamMessage">
+                <div class="loading-spinner" id="loadingSpinner" style="display: none;"></div>
+                <div id="streamStatusText">📺 No stream available</div>
+            </div>
         </div>
 
-        <button class="fullscreen-toggle" id="fullscreenToggle">⛶ Fullscreen</button>
+        <div class="video-controls">
+            <button id="joinStream">Join Stream</button>
+            <button id="leaveStream" class="danger" disabled>Leave Stream</button>
+        </div>
 
-        <div class="video-pane">
-            <div class="video-container">
-                <video id="remoteVideo" autoplay playsinline></video>
-                <div class="no-stream-message" id="noStreamMessage">
-                    <div class="loading-spinner" id="loadingSpinner" style="display: none;"></div>
-                    <div id="streamStatusText">📺 No stream available</div>
-                </div>
-            </div>
+        <div class="status disconnected" id="connectionStatus">
+            Disconnected
+        </div>
 
-            <div class="video-controls">
-                <button id="joinStream">Join Stream</button>
-                <button id="leaveStream" class="danger" disabled>Leave Stream</button>
-            </div>
+        <div class="stream-info">
+            <h3>Stream Info</h3>
+            <p><strong>Room:</strong> <span id="roomName">Not connected</span></p>
+            <p><strong>Identity:</strong> <span id="identity">Not set</span></p>
+            <p><strong>Quality:</strong> <span id="videoQuality">-</span></p>
+        </div>
 
-            <div class="status disconnected" id="connectionStatus">
-                Disconnected
-            </div>
-
-            <div class="stream-info">
-                <h3>Stream Info</h3>
-                <p><strong>Room:</strong> <span id="roomName">Not connected</span></p>
-                <p><strong>Identity:</strong> <span id="identity">Not set</span></p>
-                <p><strong>Quality:</strong> <span id="videoQuality">-</span></p>
-            </div>
-
-            <div class="participant-list">
-                <h3>Participants</h3>
-                <div id="participantsList">
-                    <div class="participant">
-                        <div class="participant-indicator"></div>
-                        No participants
-                    </div>
+        <div class="participant-list">
+            <h3>Participants</h3>
+            <div id="participantsList">
+                <div class="participant">
+                    <div class="participant-indicator"></div>
+                    No participants
                 </div>
             </div>
         </div>
