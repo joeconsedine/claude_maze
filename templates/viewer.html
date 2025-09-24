@@ -27,7 +27,7 @@
         }
 
         .presentation-area {
-            background: #1a1a1a;
+            background: transparent;
             border-radius: 0;
             display: flex;
             flex-direction: column;
@@ -38,14 +38,14 @@
         .slide-container {
             flex: 1;
             position: relative;
-            background: white;
+            background: transparent;
             margin: 0;
             border-radius: 0;
             display: flex;
-            align-items: center;
-            justify-content: center;
+            align-items: stretch;
+            justify-content: stretch;
             width: 100%;
-            height: 100%;
+            height: 100vh;
         }
 
         .video-pane {
@@ -189,6 +189,11 @@
         #slideChart {
             width: 100%;
             height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
         }
 
         .no-stream-message {
@@ -327,9 +332,13 @@
             }
 
             initializeChart() {
-                this.chart = echarts.init(document.getElementById('slideChart'));
+                const chartElement = document.getElementById('slideChart');
+                this.chart = echarts.init(chartElement, null, {
+                    width: chartElement.parentElement.clientWidth,
+                    height: window.innerHeight
+                });
                 this.chart.setOption({
-                    backgroundColor: 'transparent',
+                    backgroundColor: 'white',
                     title: {
                         text: 'Loading presentation...',
                         left: 'center',
@@ -340,7 +349,10 @@
 
                 // Resize chart when window resizes
                 window.addEventListener('resize', () => {
-                    this.chart.resize();
+                    this.chart.resize({
+                        width: chartElement.parentElement.clientWidth,
+                        height: window.innerHeight
+                    });
                 });
             }
 
