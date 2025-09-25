@@ -150,7 +150,7 @@ class PresentationController {
                 emphasis: {
                     focus: 'series'
                 },
-                animationDuration: 2000,
+                animationDuration: 500,
                 animationEasing: 'easeInOutQuart'
             }]
         };
@@ -201,7 +201,7 @@ class PresentationController {
                 emphasis: {
                     focus: 'series'
                 },
-                animationDuration: 2000,
+                animationDuration: 500,
                 animationEasing: 'easeInOutQuart'
             }]
         };
@@ -244,7 +244,7 @@ class PresentationController {
                 },
                 animationType: 'scale',
                 animationEasing: 'easeInOutQuart',
-                animationDuration: 2000
+                animationDuration: 500
             }]
         };
 
@@ -304,7 +304,7 @@ class PresentationController {
                         color: '#c23531'
                     }
                 },
-                animationDuration: 2000,
+                animationDuration: 500,
                 animationEasing: 'easeInOutQuart'
             }]
         };
