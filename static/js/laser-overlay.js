@@ -14,7 +14,7 @@ class LaserOverlay {
         // Laser properties
         this.laserColor = '#00ff88';
         this.glowColor = '#00ff88';
-        this.trailFadeSpeed = 0.95;
+        this.trailFadeSpeed = 0.8;
         this.maxTrailLength = 50;
         this.laserWidth = 3;
         this.glowIntensity = 0.8;
@@ -184,19 +184,19 @@ class LaserOverlay {
 
             if (alpha <= 0) continue;
 
-            // Draw glow
-            this.ctx.beginPath();
-            this.ctx.strokeStyle = `rgba(0, 255, 136, ${alpha * 0.3})`;
-            this.ctx.lineWidth = trail.size * 4;
-            this.ctx.arc(trail.x, trail.y, trail.size * 2, 0, Math.PI * 2);
-            this.ctx.stroke();
+            // Draw glow - removed dots, keeping only trail lines
+            // this.ctx.beginPath();
+            // this.ctx.strokeStyle = `rgba(0, 255, 136, ${alpha * 0.3})`;
+            // this.ctx.lineWidth = trail.size * 4;
+            // this.ctx.arc(trail.x, trail.y, trail.size * 2, 0, Math.PI * 2);
+            // this.ctx.stroke();
 
-            // Draw core laser
-            this.ctx.beginPath();
-            this.ctx.strokeStyle = `rgba(0, 255, 136, ${alpha})`;
-            this.ctx.lineWidth = trail.size;
-            this.ctx.arc(trail.x, trail.y, trail.size * 0.5, 0, Math.PI * 2);
-            this.ctx.stroke();
+            // Draw core laser - removed dots, keeping only trail lines
+            // this.ctx.beginPath();
+            // this.ctx.strokeStyle = `rgba(0, 255, 136, ${alpha})`;
+            // this.ctx.lineWidth = trail.size;
+            // this.ctx.arc(trail.x, trail.y, trail.size * 0.5, 0, Math.PI * 2);
+            // this.ctx.stroke();
         }
 
         // Draw connecting lines between trail points
