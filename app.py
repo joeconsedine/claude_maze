@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, redirect, url_for
 import json
 import time
 import os
@@ -7,12 +7,27 @@ import logging
 from datetime import datetime
 import livekit
 import jwt
+import pandas as pd
+from werkzeug.utils import secure_filename
+import uuid
 
 # Configure detailed logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+
+# Upload configuration
+UPLOAD_FOLDER = 'uploads'
+ALLOWED_EXTENSIONS = {'csv', 'json', 'xlsx', 'xls'}
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+
+# Create upload directory if it doesn't exist
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 class SlideController:
     def __init__(self):
@@ -205,6 +220,126 @@ def livekit_test():
 @app.route('/menu')
 def menu():
     return render_template('menu.html')
+
+@app.route('/upload')
+def upload_page():
+    return render_template('upload.html')
+
+@app.route('/api/upload', methods=['POST'])
+def upload_file():
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file provided'}), 400
+
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+
+        if not allowed_file(file.filename):
+            return jsonify({'error': 'File type not allowed'}), 400
+
+        # Get form data
+        chart_type = request.form.get('chart_type', 'line')
+        title = request.form.get('title', 'Untitled Slide')
+        summary = request.form.get('summary', '')
+
+        # Save file
+        filename = secure_filename(file.filename)
+        unique_filename = f"{uuid.uuid4()}_{filename}"
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+        file.save(filepath)
+
+        # Process the data based on file type
+        data = process_uploaded_data(filepath, chart_type)
+
+        # Create new slide
+        slide_id = f"custom_{uuid.uuid4().hex[:8]}"
+        new_slide = {
+            'id': slide_id,
+            'title': title,
+            'summary': summary,
+            'chart_type': chart_type,
+            'data': data,
+            'custom': True,
+            'filename': filename
+        }
+
+        # Add to slides
+        slide_controller.slides.append(new_slide)
+
+        # Clean up uploaded file
+        os.remove(filepath)
+
+        return jsonify({
+            'success': True,
+            'slide_id': slide_id,
+            'message': 'Slide created successfully'
+        })
+
+    except Exception as e:
+        logger.error(f"Error uploading file: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+def process_uploaded_data(filepath, chart_type):
+    """Process uploaded data file and format for charts"""
+    try:
+        # Read the file based on extension
+        if filepath.endswith('.csv'):
+            df = pd.read_csv(filepath)
+        elif filepath.endswith(('.xlsx', '.xls')):
+            df = pd.read_excel(filepath)
+        elif filepath.endswith('.json'):
+            with open(filepath, 'r') as f:
+                json_data = json.load(f)
+            df = pd.DataFrame(json_data)
+        else:
+            raise ValueError("Unsupported file format")
+
+        # Format data based on chart type
+        if chart_type in ['line', 'bar']:
+            # Assume first column is x-axis, second is y-axis
+            if len(df.columns) >= 2:
+                x_axis = df.iloc[:, 0].astype(str).tolist()
+                series = df.iloc[:, 1].tolist()
+                return {'xAxis': x_axis, 'series': series}
+            else:
+                # Single column, use index as x-axis
+                series = df.iloc[:, 0].tolist()
+                x_axis = list(range(len(series)))
+                return {'xAxis': x_axis, 'series': series}
+
+        elif chart_type == 'pie':
+            # For pie charts, assume name and value columns
+            if len(df.columns) >= 2:
+                data = []
+                for _, row in df.iterrows():
+                    data.append({'name': str(row.iloc[0]), 'value': float(row.iloc[1])})
+                return data
+            else:
+                # Single column, count occurrences
+                value_counts = df.iloc[:, 0].value_counts()
+                data = []
+                for name, value in value_counts.items():
+                    data.append({'name': str(name), 'value': int(value)})
+                return data
+
+        elif chart_type == 'scatter':
+            # Assume two numeric columns
+            if len(df.columns) >= 2:
+                data = []
+                for _, row in df.iterrows():
+                    data.append([float(row.iloc[0]), float(row.iloc[1])])
+                return data
+            else:
+                raise ValueError("Scatter plot requires at least 2 columns")
+
+        else:
+            # Default format for other chart types
+            return df.to_dict('records')
+
+    except Exception as e:
+        logger.error(f"Error processing data: {str(e)}")
+        raise e
 
 @app.route('/api/current-slide')
 def current_slide():

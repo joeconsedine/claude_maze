@@ -106,6 +106,22 @@ class PresentationController {
                 console.log(`🔴 [${this.pollCount}] Rendering scatter chart`);
                 this.renderScatterChart(slideData.data);
                 break;
+            case 'radar':
+                console.log(`🕸️ [${this.pollCount}] Rendering radar chart`);
+                this.renderRadarChart(slideData.data);
+                break;
+            case 'heatmap':
+                console.log(`🔥 [${this.pollCount}] Rendering heatmap chart`);
+                this.renderHeatmapChart(slideData.data);
+                break;
+            case 'treemap':
+                console.log(`🌳 [${this.pollCount}] Rendering treemap chart`);
+                this.renderTreemapChart(slideData.data);
+                break;
+            case 'gauge':
+                console.log(`⏱️ [${this.pollCount}] Rendering gauge chart`);
+                this.renderGaugeChart(slideData.data);
+                break;
             default:
                 console.error(`❌ [${this.pollCount}] Unknown chart type:`, slideData.chart_type);
         }
@@ -309,6 +325,114 @@ class PresentationController {
             }]
         };
 
+        this.chart.setOption(option, true);
+    }
+
+    renderRadarChart(data) {
+        const option = {
+            backgroundColor: '#242424',
+            title: { text: this.currentSlide.title, textStyle: { color: '#ffffff' }, left: 'center' },
+            radar: {
+                indicator: data.indicator || [],
+                axisName: { color: '#ffffff' },
+                splitLine: { lineStyle: { color: '#404040' } },
+                axisLine: { lineStyle: { color: '#404040' } }
+            },
+            series: [{
+                type: 'radar',
+                data: data.data || [],
+                itemStyle: { color: '#a05195' },
+                areaStyle: { opacity: 0.3 },
+                animationDuration: 500
+            }]
+        };
+        this.chart.setOption(option, true);
+    }
+
+    renderHeatmapChart(data) {
+        const option = {
+            backgroundColor: '#242424',
+            title: { text: this.currentSlide.title, textStyle: { color: '#ffffff' }, left: 'center' },
+            tooltip: { position: 'top' },
+            grid: { height: '50%', top: '15%' },
+            xAxis: {
+                type: 'category',
+                data: data.xAxis || [],
+                axisLabel: { color: '#ffffff' }
+            },
+            yAxis: {
+                type: 'category',
+                data: data.yAxis || [],
+                axisLabel: { color: '#ffffff' }
+            },
+            visualMap: {
+                min: 0,
+                max: 10,
+                calculable: true,
+                orient: 'horizontal',
+                left: 'center',
+                bottom: '5%',
+                inRange: {
+                    color: ['#003f5c', '#2f4b7c', '#665191', '#a05195', '#d45087', '#f95d6a', '#ff7c43', '#ffa600']
+                },
+                textStyle: { color: '#ffffff' }
+            },
+            series: [{
+                type: 'heatmap',
+                data: data.data || [],
+                animationDuration: 500
+            }]
+        };
+        this.chart.setOption(option, true);
+    }
+
+    renderTreemapChart(data) {
+        const option = {
+            backgroundColor: '#242424',
+            title: { text: this.currentSlide.title, textStyle: { color: '#ffffff' }, left: 'center' },
+            series: [{
+                type: 'treemap',
+                data: data || [],
+                levels: [{
+                    itemStyle: {
+                        borderColor: '#242424',
+                        borderWidth: 2,
+                        gapWidth: 2
+                    }
+                }],
+                color: ['#003f5c', '#2f4b7c', '#665191', '#a05195', '#d45087', '#f95d6a', '#ff7c43', '#ffa600'],
+                animationDuration: 500
+            }]
+        };
+        this.chart.setOption(option, true);
+    }
+
+    renderGaugeChart(data) {
+        const option = {
+            backgroundColor: '#242424',
+            title: { text: this.currentSlide.title, textStyle: { color: '#ffffff' }, left: 'center' },
+            series: [{
+                type: 'gauge',
+                detail: { formatter: '{value}%', color: '#ffffff' },
+                data: [{ value: data.value || 0, name: data.name || 'Progress' }],
+                axisLine: {
+                    lineStyle: {
+                        width: 30,
+                        color: [
+                            [0.3, '#ff7c43'],
+                            [0.7, '#ffa600'],
+                            [1, '#a05195']
+                        ]
+                    }
+                },
+                pointer: { itemStyle: { color: '#ffffff' } },
+                axisTick: { lineStyle: { color: '#ffffff' } },
+                splitLine: { lineStyle: { color: '#ffffff' } },
+                axisLabel: { color: '#ffffff' },
+                title: { color: '#ffffff' },
+                animationDuration: 500
+            }]
+        };
         this.chart.setOption(option, true);
     }
 

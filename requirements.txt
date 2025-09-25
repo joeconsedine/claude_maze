@@ -3,3 +3,5 @@ Werkzeug==2.3.6
 gunicorn==21.2.0
 livekit==1.0.13
 PyJWT==2.8.0
+pandas==2.0.3
+openpyxl==3.1.2
