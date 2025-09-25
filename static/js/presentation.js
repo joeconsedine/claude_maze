@@ -315,7 +315,7 @@ class PresentationController {
 
     initLaserOverlay() {
         console.log('🔴 Initializing laser overlay for presentation');
-        const presentationContainer = document.body;
+        const presentationContainer = document.getElementById('chart');
         this.laserOverlay = new LaserOverlay(presentationContainer);
         this.laserOverlay.setColor('#00ff88', '#44ff88'); // Green laser for presentation
 
