@@ -4,11 +4,14 @@ A Flask-based presentation system that recreates and extends the ECharts demo fu
 
 ## Features
 
-- Server-controlled slide progression (no user navigation)
-- Multiple chart types: Line, Bar, Pie, Scatter
-- Auto-advancing slides with smooth animations
-- Modular Jinja templates for each chart type
-- Responsive design
+- **Multi-user Authentication**: PostgreSQL-based user system with organizations
+- **Role-based Access Control**: Admin and standard user roles
+- **Seat Management**: Organization-based seat limits for standard users
+- **Server-controlled Presentations**: Centralized slide control with real-time sync
+- **Multiple Chart Types**: Line, Bar, Pie, Scatter with ECharts
+- **Interactive Features**: Laser pointer overlay, video streaming
+- **Data Upload**: Custom slide creation from CSV/JSON/Excel files
+- **Heroku Ready**: Production deployment configuration included
 
 ## Setup
 
@@ -25,12 +28,34 @@ A Flask-based presentation system that recreates and extends the ECharts demo fu
    pip install -r requirements.txt
    ```
 
-3. **Run the application:**
+3. **Set up PostgreSQL database:**
+   ```bash
+   # Create database (adjust connection details as needed)
+   createdb claude_maze
+
+   # Set environment variables (optional, defaults to local PostgreSQL)
+   export DATABASE_URL="postgresql://username:password@localhost/claude_maze"
+   export SECRET_KEY="your-secret-key-here"
+   ```
+
+4. **Initialize the database:**
+   ```bash
+   python init_db.py
+   ```
+
+5. **Run the application:**
    ```bash
    python app.py
    ```
 
-4. **Visit:** `http://localhost:5000`
+6. **Visit:** `http://localhost:5000`
+
+### Default Login Credentials
+
+After running `init_db.py`, you can use these test accounts:
+
+- **Admin**: `admin` / `admin123` (can control presentations)
+- **Standard**: `user` / `user123` (viewer only)
 
 ## Project Structure
 

@@ -5,3 +5,6 @@ livekit==1.0.13
 PyJWT==2.8.0
 pandas>=2.2.0
 openpyxl>=3.1.2
+Flask-SQLAlchemy==3.0.5
+Flask-Migrate==4.0.4
+psycopg2-binary==2.9.6

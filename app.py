@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, request, redirect, url_for
+from flask import Flask, render_template, jsonify, request, redirect, url_for, flash, g
 import json
 import time
 import os
@@ -10,12 +10,33 @@ import jwt
 import pandas as pd
 from werkzeug.utils import secure_filename
 import uuid
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
+from models import db, User, Organization, UserSession
+from auth import (
+    login_required, admin_required, standard_or_admin_required,
+    create_user_session, destroy_user_session, init_auth
+)
 
 # Configure detailed logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+
+# Configure database
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+database_url = os.environ.get('DATABASE_URL')
+if database_url and database_url.startswith('postgres://'):
+    # Fix for Heroku postgres URL
+    database_url = database_url.replace('postgres://', 'postgresql://', 1)
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'postgresql://localhost/claude_maze'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Initialize extensions
+db.init_app(app)
+migrate = Migrate(app, db)
+init_auth(app)
 
 # Upload configuration
 UPLOAD_FOLDER = 'uploads'
@@ -193,39 +214,153 @@ class SlideController:
 
 slide_controller = SlideController()
 
+# Authentication routes
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
+
+        if not username or not password:
+            flash('Username and password are required', 'error')
+            return render_template('auth/login.html')
+
+        user = User.query.filter_by(username=username).first()
+
+        if not user or not user.check_password(password):
+            flash('Invalid username or password', 'error')
+            return render_template('auth/login.html')
+
+        # Check if user can login (seat limits, etc.)
+        can_login, message = user.can_login()
+        if not can_login:
+            flash(message, 'error')
+            return render_template('auth/login.html')
+
+        # Create session
+        ip_address = request.environ.get('HTTP_X_FORWARDED_FOR', request.environ.get('REMOTE_ADDR'))
+        user_agent = request.environ.get('HTTP_USER_AGENT', '')
+
+        user_session, session_message = create_user_session(user, ip_address, user_agent)
+        if not user_session:
+            flash(session_message, 'error')
+            return render_template('auth/login.html')
+
+        flash(f'Welcome back, {user.username}!', 'success')
+
+        # Redirect based on role
+        if user.is_admin():
+            return redirect(url_for('control'))
+        else:
+            return redirect(url_for('viewer'))
+
+    return render_template('auth/login.html')
+
+@app.route('/logout')
+@login_required
+def logout():
+    username = g.user.username if g.user else 'Unknown'
+    destroy_user_session()
+    flash(f'Goodbye, {username}!', 'info')
+    return redirect(url_for('login'))
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
+        organization_name = request.form.get('organization_name', '').strip()
+        role = request.form.get('role', 'standard')
+
+        # Basic validation
+        if not username or not password or not organization_name:
+            flash('All fields are required', 'error')
+            return render_template('auth/register.html')
+
+        if len(password) < 6:
+            flash('Password must be at least 6 characters long', 'error')
+            return render_template('auth/register.html')
+
+        # Check if username exists
+        if User.query.filter_by(username=username).first():
+            flash('Username already exists', 'error')
+            return render_template('auth/register.html')
+
+        try:
+            # Find or create organization
+            organization = Organization.query.filter_by(name=organization_name).first()
+            if not organization:
+                organization = Organization(name=organization_name, seat_limit=5)
+                db.session.add(organization)
+                db.session.flush()  # Get the ID
+
+            # Create user
+            user = User(
+                username=username,
+                role=role if role in ['admin', 'standard'] else 'standard',
+                organization_id=organization.id
+            )
+            user.set_password(password)
+
+            db.session.add(user)
+            db.session.commit()
+
+            flash('Registration successful! Please log in.', 'success')
+            return redirect(url_for('login'))
+
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Registration error: {e}")
+            flash('Registration failed. Please try again.', 'error')
+
+    return render_template('auth/register.html')
+
 @app.route('/')
 def index():
-    return render_template('index.html')
+    if g.user:
+        if g.user.is_admin():
+            return redirect(url_for('control'))
+        else:
+            return redirect(url_for('viewer'))
+    return redirect(url_for('login'))
 
 @app.route('/control')
+@admin_required
 def control():
     return render_template('control.html')
 
 @app.route('/webcam-test')
+@admin_required
 def webcam_test():
     return render_template('webcam_test.html')
 
 @app.route('/presenter')
+@admin_required
 def presenter():
     return render_template('presenter.html')
 
 @app.route('/viewer')
+@standard_or_admin_required
 def viewer():
     return render_template('viewer.html')
 
 @app.route('/livekit-test')
+@admin_required
 def livekit_test():
     return render_template('livekit_test.html')
 
 @app.route('/menu')
+@login_required
 def menu():
     return render_template('menu.html')
 
 @app.route('/upload')
+@admin_required
 def upload_page():
     return render_template('upload.html')
 
 @app.route('/api/upload', methods=['POST'])
+@admin_required
 def upload_file():
     try:
         if 'file' not in request.files:
@@ -342,6 +477,7 @@ def process_uploaded_data(filepath, chart_type):
         raise e
 
 @app.route('/api/current-slide')
+@standard_or_admin_required
 def current_slide():
     client_ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.environ.get('REMOTE_ADDR'))
     user_agent = request.environ.get('HTTP_USER_AGENT', 'Unknown')
@@ -350,6 +486,7 @@ def current_slide():
     return jsonify(slide_controller.get_current_slide())
 
 @app.route('/api/slides')
+@standard_or_admin_required
 def get_slides():
     client_ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.environ.get('REMOTE_ADDR'))
     logger.info(f"📊 API/SLIDES called by {client_ip}")
@@ -360,6 +497,7 @@ def get_slides():
     })
 
 @app.route('/api/next-slide')
+@admin_required
 def next_slide():
     client_ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.environ.get('REMOTE_ADDR'))
     user_agent = request.environ.get('HTTP_USER_AGENT', 'Unknown')
@@ -368,6 +506,7 @@ def next_slide():
     return jsonify(slide_controller.next_slide())
 
 @app.route('/api/previous-slide')
+@admin_required
 def previous_slide():
     client_ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.environ.get('REMOTE_ADDR'))
     user_agent = request.environ.get('HTTP_USER_AGENT', 'Unknown')
@@ -376,6 +515,7 @@ def previous_slide():
     return jsonify(slide_controller.previous_slide())
 
 @app.route('/api/goto-slide/<int:index>')
+@admin_required
 def goto_slide(index):
     client_ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.environ.get('REMOTE_ADDR'))
     user_agent = request.environ.get('HTTP_USER_AGENT', 'Unknown')
@@ -385,6 +525,7 @@ def goto_slide(index):
 
 # Laser overlay API endpoints
 @app.route('/api/laser/point', methods=['POST'])
+@admin_required
 def add_laser_point():
     try:
         data = request.get_json()
@@ -401,10 +542,12 @@ def add_laser_point():
         return jsonify({'status': 'error', 'message': str(e)}), 400
 
 @app.route('/api/laser/points')
+@standard_or_admin_required
 def get_laser_points():
     return jsonify(slide_controller.get_laser_points())
 
 @app.route('/api/laser/active', methods=['POST'])
+@admin_required
 def set_laser_active():
     try:
         data = request.get_json()
@@ -415,12 +558,14 @@ def set_laser_active():
         return jsonify({'status': 'error', 'message': str(e)}), 400
 
 @app.route('/api/laser/clear', methods=['POST'])
+@admin_required
 def clear_laser_points():
     slide_controller.clear_laser_points()
     return jsonify({'status': 'success'})
 
 # Video streaming API endpoints
 @app.route('/api/video/start', methods=['POST'])
+@admin_required
 def start_video_stream():
     try:
         data = request.get_json()
@@ -443,16 +588,19 @@ def start_video_stream():
         return jsonify({'status': 'error', 'message': str(e)}), 400
 
 @app.route('/api/video/stop', methods=['POST'])
+@admin_required
 def stop_video_stream():
     slide_controller.stop_video_stream()
     return jsonify({'status': 'success'})
 
 @app.route('/api/video/state')
+@standard_or_admin_required
 def get_video_state():
     return jsonify(slide_controller.get_video_state())
 
 # LiveKit token generation endpoint
 @app.route('/api/token', methods=['POST'])
+@admin_required
 def generate_livekit_token():
     try:
         data = request.get_json()

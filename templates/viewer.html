@@ -34,6 +34,35 @@
             backdrop-filter: blur(10px);
         }
 
+        .user-info {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            z-index: 10;
+            backdrop-filter: blur(10px);
+        }
+
+        .logout-btn {
+            background: #dc3545;
+            color: white;
+            padding: 5px 10px;
+            text-decoration: none;
+            border-radius: 3px;
+            font-size: 11px;
+            margin-left: 10px;
+            transition: background-color 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: #c82333;
+        }
+
         .video-pane {
             position: fixed;
             top: 20px;
@@ -239,6 +268,13 @@
     <div class="slide-indicator" id="slideIndicator">
         Slide 1 of 5
     </div>
+
+    {% if current_user %}
+    <div class="user-info">
+        {{ current_user.username }} ({{ current_user.role.title() }})
+        <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+    </div>
+    {% endif %}
 
     <button class="fullscreen-toggle" id="fullscreenToggle">⛶ Fullscreen</button>
 
