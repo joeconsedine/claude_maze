@@ -3,209 +3,408 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Presentation Control Panel</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <title>Presentation Control</title>
     <style>
-        .control-panel {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
-        .control-header {
-            text-align: center;
-            margin-bottom: 30px;
-            color:#ffffff;
-            position: relative;
-        }
-
-        .logout-btn {
-            position: absolute;
-            top: 0;
-            right: 0;
-            background: #dc3545;
+            background: #0a0a0a;
             color: white;
-            padding: 0.5rem 1rem;
-            text-decoration: none;
-            border-radius: 5px;
-            font-size: 0.9rem;
-            transition: background-color 0.3s ease;
-        }
-
-        .logout-btn:hover {
-            background: #c82333;
-        }
-        
-
-        .control-header h1 {
-            color: #ffffff;
-            margin-bottom: 10px;
-        }
-
-        .current-slide {
-            background: #f5f5f5;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 30px;
-            text-align: center;
-        }
-
-        .current-slide h2 {
-            margin: 0 0 10px 0;
-            color: #555;
-        }
-
-        .slide-number {
-            font-size: 18px;
-            color: #666;
-        }
-
-        .navigation-controls {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-bottom: 30px;
-        }
-
-        .nav-btn {
-            background: #007bff;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: background-color 0.3s;
-        }
-
-        .nav-btn:hover {
-            background: #0056b3;
-        }
-
-        .nav-btn:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-        }
-
-        .slide-list {
-            background: white;
-            border: 1px solid #ddd;
-            border-radius: 8px;
             overflow: hidden;
         }
 
-        .slide-list h3 {
-            background: #f8f9fa;
-            margin: 0;
-            padding: 15px 20px;
-            border-bottom: 1px solid #ddd;
-            color: #333;
-        }
-
-        .slide-item {
+        .presenter-layout {
             display: flex;
-            justify-content: space-between;
+            flex-direction: column;
+            height: 100vh;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        .presentation-area {
+            flex: 1;
+            background: #1a1a1a;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .slide-container {
+            flex: 1;
+            position: relative;
+            background: white;
+            margin: 20px;
+            border-radius: 8px;
+            display: flex;
             align-items: center;
-            padding: 15px 20px;
-            border-bottom: 1px solid #eee;
-            transition: background-color 0.2s;
+            justify-content: center;
         }
 
-        .slide-item:last-child {
-            border-bottom: none;
+        .presenter-panel {
+            background: #2a2a2a;
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: row;
+            gap: 20px;
+            align-items: center;
         }
 
-        .slide-item:hover {
-            background: #f8f9fa;
+        button {
+            padding: 14px 24px;
+            border: none;
+            border-radius: 6px;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: background 0.2s;
+            white-space: nowrap;
         }
 
-        .slide-item.current {
-            background: #e7f3ff;
-            border-left: 4px solid #007bff;
+        button:hover {
+            background: #0056b3;
+        }
+
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
         }
 
         .slide-info {
-            flex-grow: 1;
-        }
-
-        .slide-title {
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 5px;
-        }
-
-        .slide-type {
-            color: #666;
-            font-size: 14px;
-        }
-
-        .goto-btn {
-            background: #28a745;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-
-        .goto-btn:hover {
-            background: #218838;
-        }
-
-        .presentation-link {
+            flex: 1;
             text-align: center;
-            margin-top: 30px;
+            font-size: 18px;
+            color: #ccc;
         }
 
-        .presentation-link a {
-            color: #007bff;
-            text-decoration: none;
-            font-size: 16px;
+        .nav-buttons {
+            display: flex;
+            gap: 15px;
         }
 
-        .presentation-link a:hover {
-            text-decoration: underline;
+        #slideChart {
+            width: 100%;
+            height: 100%;
         }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
 </head>
 <body>
-    <div class="control-panel">
-        <div class="control-header">
-            <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
-            <h1>Presentation Control Panel</h1>
-            <p>Control which slide is currently displayed</p>
-            {% if current_user %}
-                <p style="font-size: 0.9rem; color: #aaa;">Logged in as: {{ current_user.username }} ({{ current_user.role.title() }})</p>
-            {% endif %}
-        </div>
-
-        <div class="current-slide">
-            <h2 id="current-slide-title">Loading...</h2>
-            <div class="slide-number" id="slide-counter">Slide 1 of 4</div>
-        </div>
-
-        <div class="navigation-controls">
-            <button class="nav-btn" id="prev-btn">← Previous</button>
-            <button class="nav-btn" id="next-btn">Next →</button>
-        </div>
-
-        <div class="slide-list">
-            <h3>All Slides</h3>
-            <div id="slides-container">
-                <!-- Slides will be populated by JavaScript -->
+    <div class="presenter-layout">
+        <div class="presentation-area">
+            <div class="slide-container">
+                <div id="slideChart"></div>
             </div>
         </div>
 
-        <div class="presentation-link">
-            <a href="/" target="_blank">Open Presentation →</a>
+        <div class="presenter-panel">
+            <div class="nav-buttons">
+                <button id="prevSlide">← Previous</button>
+                <button id="nextSlide">Next →</button>
+            </div>
+            <div class="slide-info" id="slideInfo">
+                Slide 1 of 4
+            </div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
-    <script src="{{ url_for('static', filename='js/laser-overlay.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/slide-preview.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/control.js') }}"></script>
+    <script>
+        class PresenterApp {
+            constructor() {
+                this.currentSlide = null;
+                this.chart = null;
+
+                this.initializeElements();
+                this.setupEventListeners();
+                this.initializeChart();
+                this.loadCurrentSlide();
+            }
+
+            initializeElements() {
+                this.slideInfoEl = document.getElementById('slideInfo');
+            }
+
+            setupEventListeners() {
+                document.getElementById('prevSlide').addEventListener('click', () => this.previousSlide());
+                document.getElementById('nextSlide').addEventListener('click', () => this.nextSlide());
+            }
+
+            initializeChart() {
+                this.chart = echarts.init(document.getElementById('slideChart'));
+                this.chart.setOption({
+                    backgroundColor: 'transparent',
+                    title: {
+                        text: 'Loading...',
+                        left: 'center',
+                        top: 'middle',
+                        textStyle: {
+                            color: '#333',
+                            fontSize: 32,
+                            fontWeight: 'bold'
+                        }
+                    }
+                });
+            }
+
+            async loadCurrentSlide() {
+                try {
+                    const response = await fetch('/api/current-slide');
+                    const slide = await response.json();
+                    this.currentSlide = slide;
+                    this.updateChart(slide);
+                    this.updateSlideInfo();
+                } catch (error) {
+                    console.error('Error loading slide:', error);
+                }
+            }
+
+            updateChart(slide) {
+                let option;
+
+                switch (slide.chart_type) {
+                    case 'line':
+                        option = {
+                            backgroundColor: 'transparent',
+                            title: {
+                                text: slide.title,
+                                left: 'center',
+                                textStyle: {
+                                    fontSize: 32,
+                                    fontWeight: 'bold',
+                                    color: '#2c3e50'
+                                }
+                            },
+                            grid: {
+                                left: '10%',
+                                right: '10%',
+                                bottom: '15%',
+                                top: '20%'
+                            },
+                            xAxis: {
+                                type: 'category',
+                                data: slide.data.xAxis,
+                                axisLine: { lineStyle: { color: '#666', width: 2 } },
+                                axisLabel: { fontSize: 14, color: '#333' }
+                            },
+                            yAxis: {
+                                type: 'value',
+                                axisLine: { lineStyle: { color: '#666', width: 2 } },
+                                axisLabel: { fontSize: 14, color: '#333' },
+                                splitLine: { lineStyle: { color: '#e0e0e0' } }
+                            },
+                            series: [{
+                                data: slide.data.series,
+                                type: 'line',
+                                smooth: true,
+                                lineStyle: { width: 4, color: '#3498db' },
+                                itemStyle: { color: '#3498db', borderWidth: 3 },
+                                symbolSize: 10,
+                                animationDuration: 2000,
+                                animationEasing: 'quartInOut',
+                                areaStyle: {
+                                    color: {
+                                        type: 'linear',
+                                        x: 0, y: 0, x2: 0, y2: 1,
+                                        colorStops: [
+                                            { offset: 0, color: 'rgba(52, 152, 219, 0.3)' },
+                                            { offset: 1, color: 'rgba(52, 152, 219, 0.05)' }
+                                        ]
+                                    }
+                                }
+                            }]
+                        };
+                        break;
+                    case 'bar':
+                        option = {
+                            backgroundColor: 'transparent',
+                            title: {
+                                text: slide.title,
+                                left: 'center',
+                                textStyle: {
+                                    fontSize: 32,
+                                    fontWeight: 'bold',
+                                    color: '#2c3e50'
+                                }
+                            },
+                            grid: {
+                                left: '10%',
+                                right: '10%',
+                                bottom: '15%',
+                                top: '20%'
+                            },
+                            xAxis: {
+                                type: 'category',
+                                data: slide.data.xAxis,
+                                axisLine: { lineStyle: { color: '#666', width: 2 } },
+                                axisLabel: { fontSize: 14, color: '#333' }
+                            },
+                            yAxis: {
+                                type: 'value',
+                                axisLine: { lineStyle: { color: '#666', width: 2 } },
+                                axisLabel: { fontSize: 14, color: '#333' },
+                                splitLine: { lineStyle: { color: '#e0e0e0' } }
+                            },
+                            series: [{
+                                data: slide.data.series,
+                                type: 'bar',
+                                itemStyle: {
+                                    color: {
+                                        type: 'linear',
+                                        x: 0, y: 0, x2: 0, y2: 1,
+                                        colorStops: [
+                                            { offset: 0, color: '#9b59b6' },
+                                            { offset: 1, color: '#8e44ad' }
+                                        ]
+                                    },
+                                    borderRadius: [8, 8, 0, 0]
+                                },
+                                animationDuration: 2000,
+                                animationEasing: 'quartInOut'
+                            }]
+                        };
+                        break;
+                    case 'pie':
+                        option = {
+                            backgroundColor: 'transparent',
+                            title: {
+                                text: slide.title,
+                                left: 'center',
+                                textStyle: {
+                                    fontSize: 32,
+                                    fontWeight: 'bold',
+                                    color: '#2c3e50'
+                                }
+                            },
+                            legend: {
+                                bottom: '5%',
+                                left: 'center',
+                                textStyle: { fontSize: 14 }
+                            },
+                            series: [{
+                                name: slide.title,
+                                type: 'pie',
+                                radius: ['40%', '70%'],
+                                center: ['50%', '50%'],
+                                data: slide.data,
+                                label: {
+                                    fontSize: 14,
+                                    fontWeight: 'bold'
+                                },
+                                emphasis: {
+                                    itemStyle: {
+                                        shadowBlur: 15,
+                                        shadowOffsetX: 0,
+                                        shadowColor: 'rgba(0, 0, 0, 0.5)'
+                                    },
+                                    label: {
+                                        fontSize: 16
+                                    }
+                                },
+                                itemStyle: {
+                                    borderRadius: 8,
+                                    borderColor: '#fff',
+                                    borderWidth: 3
+                                },
+                                animationDuration: 2000,
+                                animationEasing: 'quartInOut'
+                            }]
+                        };
+                        break;
+                    case 'scatter':
+                        option = {
+                            backgroundColor: 'transparent',
+                            title: {
+                                text: slide.title,
+                                left: 'center',
+                                textStyle: {
+                                    fontSize: 32,
+                                    fontWeight: 'bold',
+                                    color: '#2c3e50'
+                                }
+                            },
+                            grid: {
+                                left: '10%',
+                                right: '10%',
+                                bottom: '15%',
+                                top: '20%'
+                            },
+                            xAxis: {
+                                type: 'value',
+                                axisLine: { lineStyle: { color: '#666', width: 2 } },
+                                axisLabel: { fontSize: 14, color: '#333' },
+                                splitLine: { lineStyle: { color: '#e0e0e0' } }
+                            },
+                            yAxis: {
+                                type: 'value',
+                                axisLine: { lineStyle: { color: '#666', width: 2 } },
+                                axisLabel: { fontSize: 14, color: '#333' },
+                                splitLine: { lineStyle: { color: '#e0e0e0' } }
+                            },
+                            series: [{
+                                symbolSize: 15,
+                                data: slide.data,
+                                type: 'scatter',
+                                itemStyle: {
+                                    color: '#e74c3c',
+                                    shadowBlur: 5,
+                                    shadowColor: 'rgba(231, 76, 60, 0.5)'
+                                },
+                                animationDuration: 2000,
+                                animationEasing: 'quartInOut'
+                            }]
+                        };
+                        break;
+                }
+
+                this.chart.setOption(option, true);
+            }
+
+            async updateSlideInfo() {
+                try {
+                    const response = await fetch('/api/slides');
+                    const data = await response.json();
+                    this.slideInfoEl.textContent = `Slide ${data.current_index + 1} of ${data.total}`;
+                } catch (error) {
+                    console.error('Error updating slide info:', error);
+                }
+            }
+
+            async previousSlide() {
+                try {
+                    const response = await fetch('/api/previous-slide');
+                    const slide = await response.json();
+                    this.currentSlide = slide;
+                    this.updateChart(slide);
+                    this.updateSlideInfo();
+                } catch (error) {
+                    console.error('Error going to previous slide:', error);
+                }
+            }
+
+            async nextSlide() {
+                try {
+                    const response = await fetch('/api/next-slide');
+                    const slide = await response.json();
+                    this.currentSlide = slide;
+                    this.updateChart(slide);
+                    this.updateSlideInfo();
+                } catch (error) {
+                    console.error('Error going to next slide:', error);
+                }
+            }
+        }
+
+        // Initialize the presenter app
+        const presenterApp = new PresenterApp();
+    </script>
 </body>
 </html>
