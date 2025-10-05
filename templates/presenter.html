@@ -201,6 +201,12 @@
                 const container = document.getElementById('slideChart');
                 this.chart = echarts.init(container);
 
+                // Get selected state from current sub-slide, or use defaults
+                let selectedState = { "Shanghai Top10": false, "Canton Top10": false };
+                if (this.currentSlide && this.currentSlide.current_sub_slide_data) {
+                    selectedState = this.currentSlide.current_sub_slide_data.selected;
+                }
+
                 this.chart.setOption({
                     backgroundColor: "#1b1b1b",
                     color: ["gold", "aqua", "lime"],
@@ -216,7 +222,7 @@
                         x: "left",
                         data: ["Beijing Top10", "Shanghai Top10", "Canton Top10"],
                         selectedMode: "single",
-                        selected: { "Shanghai Top10": false, "Canton Top10": false },
+                        selected: selectedState,
                         textStyle: { color: "#fff" }
                     },
                     series: [{

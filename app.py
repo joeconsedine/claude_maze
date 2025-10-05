@@ -53,6 +53,7 @@ def allowed_file(filename):
 class SlideController:
     def __init__(self):
         self.current_slide = 0
+        self.current_sub_slide = 0
         self.lock = threading.Lock()
         self.laser_points = []  # Store active laser points
         self.laser_active = False
@@ -109,14 +110,32 @@ class SlideController:
                 'id': 'china_map',
                 'title': 'Analog Migration',
                 'chart_type': 'china_map',
-                'data': {}
+                'data': {},
+                'sub_slides': [
+                    {
+                        'name': 'Beijing Top10',
+                        'selected': {'Beijing Top10': True, 'Shanghai Top10': False, 'Canton Top10': False}
+                    },
+                    {
+                        'name': 'Shanghai Top10',
+                        'selected': {'Beijing Top10': False, 'Shanghai Top10': True, 'Canton Top10': False}
+                    },
+                    {
+                        'name': 'Canton Top10',
+                        'selected': {'Beijing Top10': False, 'Shanghai Top10': False, 'Canton Top10': True}
+                    }
+                ]
             }
         ]
 
     def get_current_slide(self):
         with self.lock:
-            slide = self.slides[self.current_slide]
-            logger.info(f"📖 GET_CURRENT_SLIDE: Returning slide {self.current_slide} - {slide['title']} (ID: {slide['id']})")
+            slide = self.slides[self.current_slide].copy()
+            slide['current_sub_slide'] = self.current_sub_slide
+            if 'sub_slides' in slide and len(slide['sub_slides']) > 0:
+                slide['total_sub_slides'] = len(slide['sub_slides'])
+                slide['current_sub_slide_data'] = slide['sub_slides'][self.current_sub_slide]
+            logger.info(f"📖 GET_CURRENT_SLIDE: Returning slide {self.current_slide}/{self.current_sub_slide} - {slide['title']} (ID: {slide['id']})")
             return slide
 
     def next_slide(self):
@@ -126,9 +145,10 @@ class SlideController:
                 self.current_slide += 1
             else:
                 self.current_slide = 0
+            self.current_sub_slide = 0  # Reset sub-slide when changing slides
             slide = self.slides[self.current_slide]
             logger.warning(f"⏭️ NEXT_SLIDE CALLED: {old_slide} → {self.current_slide} - Now showing: {slide['title']}")
-            return slide
+            return self.get_current_slide()
 
     def previous_slide(self):
         with self.lock:
@@ -137,9 +157,38 @@ class SlideController:
                 self.current_slide -= 1
             else:
                 self.current_slide = len(self.slides) - 1
+            self.current_sub_slide = 0  # Reset sub-slide when changing slides
             slide = self.slides[self.current_slide]
             logger.warning(f"⏮️ PREVIOUS_SLIDE CALLED: {old_slide} → {self.current_slide} - Now showing: {slide['title']}")
-            return slide
+            return self.get_current_slide()
+
+    def next_sub_slide(self):
+        with self.lock:
+            slide = self.slides[self.current_slide]
+            if 'sub_slides' not in slide or len(slide['sub_slides']) == 0:
+                return self.get_current_slide()
+
+            old_sub = self.current_sub_slide
+            if self.current_sub_slide < len(slide['sub_slides']) - 1:
+                self.current_sub_slide += 1
+            else:
+                self.current_sub_slide = 0
+            logger.warning(f"⏩ NEXT_SUB_SLIDE CALLED: {old_sub} → {self.current_sub_slide}")
+            return self.get_current_slide()
+
+    def previous_sub_slide(self):
+        with self.lock:
+            slide = self.slides[self.current_slide]
+            if 'sub_slides' not in slide or len(slide['sub_slides']) == 0:
+                return self.get_current_slide()
+
+            old_sub = self.current_sub_slide
+            if self.current_sub_slide > 0:
+                self.current_sub_slide -= 1
+            else:
+                self.current_sub_slide = len(slide['sub_slides']) - 1
+            logger.warning(f"⏪ PREVIOUS_SUB_SLIDE CALLED: {old_sub} → {self.current_sub_slide}")
+            return self.get_current_slide()
 
     def goto_slide(self, index):
         with self.lock:
@@ -528,6 +577,16 @@ def goto_slide(index):
     referer = request.environ.get('HTTP_REFERER', 'No referer')
     logger.error(f"🚨 API/GOTO-SLIDE CALLED! Index: {index} - IP: {client_ip} - UA: {user_agent[:50]}... - Referer: {referer}")
     return jsonify(slide_controller.goto_slide(index))
+
+@app.route('/api/next-sub-slide')
+@admin_required
+def next_sub_slide():
+    return jsonify(slide_controller.next_sub_slide())
+
+@app.route('/api/previous-sub-slide')
+@admin_required
+def previous_sub_slide():
+    return jsonify(slide_controller.previous_sub_slide())
 
 # Laser overlay API endpoints
 @app.route('/api/laser/point', methods=['POST'])

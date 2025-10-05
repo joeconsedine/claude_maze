@@ -108,11 +108,15 @@
 
         <div class="presenter-panel">
             <div class="nav-buttons">
-                <button id="prevSlide">← Previous</button>
-                <button id="nextSlide">Next →</button>
+                <button id="prevSlide">← Previous Slide</button>
+                <button id="nextSlide">Next Slide →</button>
+            </div>
+            <div class="nav-buttons" id="subSlideNav" style="display: none;">
+                <button id="prevSubSlide">⬅ Sub</button>
+                <button id="nextSubSlide">Sub ➡</button>
             </div>
             <div class="slide-info" id="slideInfo">
-                Slide 1 of 4
+                Slide 1 of 5
             </div>
         </div>
     </div>
@@ -136,6 +140,8 @@
             setupEventListeners() {
                 document.getElementById('prevSlide').addEventListener('click', () => this.previousSlide());
                 document.getElementById('nextSlide').addEventListener('click', () => this.nextSlide());
+                document.getElementById('prevSubSlide').addEventListener('click', () => this.previousSubSlide());
+                document.getElementById('nextSubSlide').addEventListener('click', () => this.nextSubSlide());
             }
 
             initializeChart() {
@@ -376,7 +382,15 @@
                 try {
                     const response = await fetch('/api/slides');
                     const data = await response.json();
-                    this.slideInfoEl.textContent = `Slide ${data.current_index + 1} of ${data.total}`;
+
+                    // Check if current slide has sub-slides
+                    if (this.currentSlide && this.currentSlide.total_sub_slides) {
+                        document.getElementById('subSlideNav').style.display = 'flex';
+                        this.slideInfoEl.textContent = `Slide ${data.current_index + 1} of ${data.total} (Sub: ${this.currentSlide.current_sub_slide + 1}/${this.currentSlide.total_sub_slides})`;
+                    } else {
+                        document.getElementById('subSlideNav').style.display = 'none';
+                        this.slideInfoEl.textContent = `Slide ${data.current_index + 1} of ${data.total}`;
+                    }
                 } catch (error) {
                     console.error('Error updating slide info:', error);
                 }
@@ -406,6 +420,12 @@
                 const container = document.getElementById('slideChart');
                 this.chart = echarts.init(container);
 
+                // Get selected state from current sub-slide, or use defaults
+                let selectedState = { "Shanghai Top10": false, "Canton Top10": false };
+                if (this.currentSlide && this.currentSlide.current_sub_slide_data) {
+                    selectedState = this.currentSlide.current_sub_slide_data.selected;
+                }
+
                 this.chart.setOption({
                     backgroundColor: "#1b1b1b",
                     color: ["gold", "aqua", "lime"],
@@ -421,7 +441,7 @@
                         x: "left",
                         data: ["Beijing Top10", "Shanghai Top10", "Canton Top10"],
                         selectedMode: "single",
-                        selected: { "Shanghai Top10": false, "Canton Top10": false },
+                        selected: selectedState,
                         textStyle: { color: "#fff" }
                     },
                     series: [{
@@ -523,6 +543,30 @@
                     this.updateSlideInfo();
                 } catch (error) {
                     console.error('Error going to next slide:', error);
+                }
+            }
+
+            async previousSubSlide() {
+                try {
+                    const response = await fetch('/api/previous-sub-slide');
+                    const slide = await response.json();
+                    this.currentSlide = slide;
+                    this.updateChart(slide);
+                    this.updateSlideInfo();
+                } catch (error) {
+                    console.error('Error going to previous sub-slide:', error);
+                }
+            }
+
+            async nextSubSlide() {
+                try {
+                    const response = await fetch('/api/next-sub-slide');
+                    const slide = await response.json();
+                    this.currentSlide = slide;
+                    this.updateChart(slide);
+                    this.updateSlideInfo();
+                } catch (error) {
+                    console.error('Error going to next sub-slide:', error);
                 }
             }
         }
