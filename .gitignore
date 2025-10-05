@@ -142,3 +142,6 @@ Thumbs.db
 
 # PyCharm
 .idea/
+
+# Reference folder
+reference/

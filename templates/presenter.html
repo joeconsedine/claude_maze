@@ -169,9 +169,133 @@
                             }]
                         };
                         break;
+                    case 'china_map':
+                        // Special case: load ECharts v2 for China map
+                        this.loadChinaMap();
+                        return;
                 }
 
                 this.chart.setOption(option, true);
+            }
+
+            loadChinaMap() {
+                // Dispose current chart
+                if (this.chart) {
+                    this.chart.dispose();
+                }
+
+                // Load ECharts v2 script if not already loaded
+                if (!window.echartsV2Loaded) {
+                    const script = document.createElement('script');
+                    script.src = 'https://s3-us-west-2.amazonaws.com/s.cdpn.io/95368/echarts-all-english-v2.js';
+                    script.onload = () => {
+                        window.echartsV2Loaded = true;
+                        this.renderChinaMap();
+                    };
+                    document.head.appendChild(script);
+                } else {
+                    this.renderChinaMap();
+                }
+            }
+
+            renderChinaMap() {
+                const container = document.getElementById('slideChart');
+                this.chart = echarts.init(container);
+
+                this.chart.setOption({
+                    backgroundColor: "#1b1b1b",
+                    color: ["gold", "aqua", "lime"],
+                    title: {
+                        text: "Analog Migration",
+                        subtext: "Data is purely fictional",
+                        x: "center",
+                        textStyle: { color: "#fff", fontSize: 32, fontWeight: 'bold' }
+                    },
+                    tooltip: { trigger: "item", formatter: "{b}" },
+                    legend: {
+                        orient: "vertical",
+                        x: "left",
+                        data: ["Beijing Top10", "Shanghai Top10", "Canton Top10"],
+                        selectedMode: "single",
+                        selected: { "Shanghai Top10": false, "Canton Top10": false },
+                        textStyle: { color: "#fff" }
+                    },
+                    series: [{
+                        name: "Nationwide",
+                        type: "map",
+                        roam: true,
+                        hoverable: false,
+                        mapType: "china",
+                        itemStyle: {
+                            normal: {
+                                borderColor: "rgba(100,149,237,1)",
+                                borderWidth: 0.5,
+                                areaStyle: { color: "#1b1b1b" }
+                            }
+                        },
+                        data: [],
+                        markLine: {
+                            smooth: true,
+                            symbol: ["none","circle"],
+                            symbolSize: 1,
+                            itemStyle: {
+                                normal: {
+                                    color:"#fff",
+                                    borderWidth:1,
+                                    borderColor:"rgba(30,144,255,0.5)"
+                                }
+                            },
+                            data: [
+                                [{ name: "北京" }, { name: "上海" }],
+                                [{ name: "北京" }, { name: "广州" }],
+                                [{ name: "北京" }, { name: "大连" }],
+                                [{ name: "北京" }, { name: "南宁" }]
+                            ]
+                        },
+                        geoCoord: {
+                            上海:[121.4648,31.2891], 北京:[116.4551,40.2539],
+                            广州:[113.5107,23.2196], 大连:[122.2229,39.4409],
+                            南宁:[108.479,23.1152], 深圳:[114.5435,22.5439]
+                        }
+                    },
+                    {
+                        name: "Beijing Top10",
+                        type: "map",
+                        mapType: "china",
+                        data: [],
+                        markLine: {
+                            smooth: true,
+                            effect: { show: true, scaleSize: 1, period: 30, color: "#fff", shadowBlur: 10 },
+                            itemStyle: {
+                                normal: {
+                                    borderWidth: 1,
+                                    lineStyle: { type: "solid", shadowBlur: 10 }
+                                }
+                            },
+                            data: [
+                                [{ name: "北京" }, { name: "上海", value: 95 }],
+                                [{ name: "北京" }, { name: "广州", value: 90 }],
+                                [{ name: "北京" }, { name: "大连", value: 80 }],
+                                [{ name: "北京" }, { name: "南宁", value: 70 }]
+                            ]
+                        },
+                        markPoint: {
+                            symbol: "emptyCircle",
+                            symbolSize: function (v) { return 10 + v / 10; },
+                            effect: { show: true, shadowBlur: 0 },
+                            itemStyle: {
+                                normal: { label: { show: false } },
+                                emphasis: { label: { position: "top" } }
+                            },
+                            data: [
+                                { name: "上海", value: 95 },
+                                { name: "广州", value: 90 },
+                                { name: "大连", value: 80 },
+                                { name: "南宁", value: 70 }
+                            ]
+                        }
+                    }]
+                });
             }
 
         }
