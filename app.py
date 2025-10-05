@@ -130,11 +130,12 @@ class SlideController:
 
     def get_current_slide(self):
         with self.lock:
-            slide = dict(self.slides[self.current_slide])
+            # Deep copy to avoid mutation issues
+            slide = json.loads(json.dumps(self.slides[self.current_slide]))
             slide['current_sub_slide'] = self.current_sub_slide
             if 'sub_slides' in slide and len(slide['sub_slides']) > 0:
                 slide['total_sub_slides'] = len(slide['sub_slides'])
-                slide['current_sub_slide_data'] = dict(slide['sub_slides'][self.current_sub_slide])
+                slide['current_sub_slide_data'] = slide['sub_slides'][self.current_sub_slide]
             logger.info(f"📖 GET_CURRENT_SLIDE: Returning slide {self.current_slide}/{self.current_sub_slide} - {slide['title']} (ID: {slide['id']})")
             return slide
 
