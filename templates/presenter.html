@@ -103,7 +103,6 @@
                     const slide = await response.json();
                     this.currentSlide = slide;
                     this.updateChart(slide);
-                    this.updateSlideInfo();
                 } catch (error) {
                     console.error('Error loading slide:', error);
                 }
